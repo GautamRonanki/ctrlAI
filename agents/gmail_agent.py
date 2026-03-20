@@ -17,11 +17,15 @@ import time
 GMAIL_BASE = "https://gmail.googleapis.com/gmail/v1/users/me"
 
 
-async def list_emails(google_token: str, max_results: int = 5, agent_name: str = "gmail_agent") -> dict:
+async def list_emails(
+    google_token: str, max_results: int = 5, agent_name: str = "gmail_agent"
+) -> dict:
     """List recent emails from the user's inbox."""
     # Permission check
     if not check_scope_permission(agent_name, "gmail.readonly"):
-        return {"error": "Permission denied: gmail_agent does not have gmail.readonly scope"}
+        return {
+            "error": f"Permission denied: {agent_name} does not have gmail.readonly scope"
+        }
 
     start = time.time()
     async with httpx.AsyncClient() as client:
@@ -33,7 +37,10 @@ async def list_emails(google_token: str, max_results: int = 5, agent_name: str =
     log_api_call(agent_name, "gmail", "messages.list", response.status_code, latency)
 
     if response.status_code != 200:
-        return {"error": f"Gmail API error: {response.status_code}", "details": response.json()}
+        return {
+            "error": f"Gmail API error: {response.status_code}",
+            "details": response.json(),
+        }
 
     messages = response.json().get("messages", [])
 
@@ -47,10 +54,14 @@ async def list_emails(google_token: str, max_results: int = 5, agent_name: str =
     return {"count": len(results), "emails": results}
 
 
-async def read_email(google_token: str, message_id: str, agent_name: str = "gmail_agent") -> dict:
+async def read_email(
+    google_token: str, message_id: str, agent_name: str = "gmail_agent"
+) -> dict:
     """Read a specific email by ID."""
     if not check_scope_permission(agent_name, "gmail.readonly"):
-        return {"error": "Permission denied: gmail_agent does not have gmail.readonly scope"}
+        return {
+            "error": f"Permission denied: {agent_name} does not have gmail.readonly scope"
+        }
 
     return await _get_message_detail(google_token, message_id, agent_name)
 
@@ -68,7 +79,9 @@ async def send_email(
     """
     # Permission check
     if not check_scope_permission(agent_name, "gmail.send"):
-        return {"error": "Permission denied: gmail_agent does not have gmail.send scope"}
+        return {
+            "error": f"Permission denied: {agent_name} does not have gmail.send scope"
+        }
 
     # Log that this is a high-stakes action
     if is_high_stakes(agent_name, "send_email"):
@@ -100,7 +113,10 @@ async def send_email(
     log_api_call(agent_name, "gmail", "messages.send", response.status_code, latency)
 
     if response.status_code != 200:
-        return {"error": f"Send failed: {response.status_code}", "details": response.json()}
+        return {
+            "error": f"Send failed: {response.status_code}",
+            "details": response.json(),
+        }
 
     result = response.json()
     log_audit(
@@ -119,7 +135,9 @@ async def search_emails(
 ) -> dict:
     """Search emails by query string (Gmail search syntax)."""
     if not check_scope_permission(agent_name, "gmail.readonly"):
-        return {"error": "Permission denied: gmail_agent does not have gmail.readonly scope"}
+        return {
+            "error": f"Permission denied: {agent_name} does not have gmail.readonly scope"
+        }
 
     start = time.time()
     async with httpx.AsyncClient() as client:
@@ -131,7 +149,10 @@ async def search_emails(
     log_api_call(agent_name, "gmail", "messages.search", response.status_code, latency)
 
     if response.status_code != 200:
-        return {"error": f"Search failed: {response.status_code}", "details": response.json()}
+        return {
+            "error": f"Search failed: {response.status_code}",
+            "details": response.json(),
+        }
 
     messages = response.json().get("messages", [])
     results = []
@@ -143,7 +164,9 @@ async def search_emails(
     return {"query": query, "count": len(results), "emails": results}
 
 
-async def _get_message_detail(google_token: str, message_id: str, agent_name: str) -> dict | None:
+async def _get_message_detail(
+    google_token: str, message_id: str, agent_name: str
+) -> dict | None:
     """Fetch details of a single email message."""
     start = time.time()
     async with httpx.AsyncClient() as client:
@@ -157,7 +180,9 @@ async def _get_message_detail(google_token: str, message_id: str, agent_name: st
         return None
 
     data = response.json()
-    headers = {h["name"]: h["value"] for h in data.get("payload", {}).get("headers", [])}
+    headers = {
+        h["name"]: h["value"] for h in data.get("payload", {}).get("headers", [])
+    }
 
     return {
         "id": data.get("id"),

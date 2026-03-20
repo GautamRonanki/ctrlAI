@@ -19,7 +19,9 @@ async def _get_google_token_or_fail(request: Request) -> str:
     user_id = user.get("sub")
     token = await get_google_token(user_id)
     if not token:
-        raise HTTPException(status_code=400, detail="No Google token available. Re-login with Google.")
+        raise HTTPException(
+            status_code=400, detail="No Google token available. Re-login with Google."
+        )
 
     return token
 
@@ -45,10 +47,26 @@ async def gmail_read(request: Request, message_id: str):
 
 
 @router.get("/gmail/search")
-async def gmail_search(request: Request, q: str = Query(...), max_results: int = Query(default=5, le=20)):
+async def gmail_search(
+    request: Request, q: str = Query(...), max_results: int = Query(default=5, le=20)
+):
     """Search emails."""
     from agents.gmail_agent import search_emails
 
     token = await _get_google_token_or_fail(request)
     result = await search_emails(token, query=q, max_results=max_results)
+    return result
+
+
+@router.get("/gmail/unauthorized-test")
+async def gmail_unauthorized_test(request: Request):
+    """
+    Test that a non-Gmail agent cannot access Gmail.
+    This demonstrates permission enforcement — the core of ctrlAI.
+    """
+    from agents.gmail_agent import list_emails
+
+    token = await _get_google_token_or_fail(request)
+    # Try to use Gmail with the github_agent identity — should be BLOCKED
+    result = await list_emails(token, max_results=1, agent_name="github_agent")
     return result
