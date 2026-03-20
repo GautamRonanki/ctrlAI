@@ -26,6 +26,9 @@ APP_SECRET_KEY = os.getenv("APP_SECRET_KEY", secrets.token_hex(32))
 
 app = FastAPI(title="ctrlAI")
 app.add_middleware(SessionMiddleware, secret_key=APP_SECRET_KEY)
+from agents.agent_routes import router as agent_router
+
+app.include_router(agent_router)
 
 
 @app.get("/")

@@ -1,0 +1,4 @@
+{"timestamp": "2026-03-20T20:47:59.752123+00:00", "event_type": "permission_check", "agent_name": "gmail_agent", "action": "gmail.readonly", "status": "allowed", "user_id": null, "details": {"reason": "scope permitted"}}
+{"timestamp": "2026-03-20T20:47:59.850358+00:00", "event_type": "api_call", "agent_name": "gmail_agent", "action": "gmail:messages.list", "status": "error", "user_id": null, "details": {"status_code": 401, "latency_ms": 97.47}}
+{"timestamp": "2026-03-20T20:49:03.984022+00:00", "event_type": "permission_check", "agent_name": "gmail_agent", "action": "gmail.readonly", "status": "allowed", "user_id": null, "details": {"reason": "scope permitted"}}
+{"timestamp": "2026-03-20T20:49:04.214915+00:00", "event_type": "api_call", "agent_name": "gmail_agent", "action": "gmail:messages.list", "status": "success", "user_id": null, "details": {"status_code": 200, "latency_ms": 227.32}}
