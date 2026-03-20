@@ -24,3 +24,7 @@
 {"timestamp": "2026-03-20T21:11:16.942922+00:00", "event_type": "api_call", "agent_name": "calendar_agent", "action": "calendar:events.list", "status": "success", "user_id": null, "details": {"status_code": 200, "latency_ms": 365.07}}
 {"timestamp": "2026-03-20T21:11:41.161735+00:00", "event_type": "permission_check", "agent_name": "drive_agent", "action": "drive.readonly", "status": "allowed", "user_id": null, "details": {"reason": "scope permitted"}}
 {"timestamp": "2026-03-20T21:11:42.338127+00:00", "event_type": "api_call", "agent_name": "drive_agent", "action": "drive:files.list", "status": "success", "user_id": null, "details": {"status_code": 200, "latency_ms": 1170.39}}
+{"timestamp": "2026-03-20T21:18:53.951986+00:00", "event_type": "slack_message", "agent_name": "orchestrator", "action": "receive", "status": "success", "user_id": null, "details": {"text": "Can you read my recent emails?"}}
+{"timestamp": "2026-03-20T21:18:56.195453+00:00", "event_type": "routing", "agent_name": "orchestrator", "action": "gmail_agent/list_emails", "status": "success", "user_id": null, "details": {"params": {}}}
+{"timestamp": "2026-03-20T21:18:56.746962+00:00", "event_type": "permission_check", "agent_name": "gmail_agent", "action": "gmail.readonly", "status": "allowed", "user_id": null, "details": {"reason": "scope permitted"}}
+{"timestamp": "2026-03-20T21:18:57.099000+00:00", "event_type": "api_call", "agent_name": "gmail_agent", "action": "gmail:messages.list", "status": "success", "user_id": null, "details": {"status_code": 200, "latency_ms": 349.66}}
