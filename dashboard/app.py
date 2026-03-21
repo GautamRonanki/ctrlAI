@@ -246,6 +246,69 @@ for i, (name, agent) in enumerate(agents.items()):
 st.divider()
 
 # ============================================================
+# Agent Permission Management
+# ============================================================
+st.header("⚙️ Agent Permission Management")
+st.caption(
+    "Toggle scopes and high-stakes actions per agent. Changes take effect immediately on the next request."
+)
+
+from core.permissions import (
+    get_available_scopes,
+    get_available_high_stakes,
+    update_scopes,
+    update_high_stakes,
+)
+
+mgmt_tabs = st.tabs([humanize(name) for name in agents.keys()])
+
+for tab, (name, agent) in zip(mgmt_tabs, agents.items()):
+    with tab:
+        col_scopes, col_highstakes = st.columns(2)
+
+        with col_scopes:
+            st.markdown("**Permitted Scopes**")
+            st.caption("Toggle which scopes this agent is allowed to use.")
+            available = get_available_scopes(name)
+            current_scopes = list(agent.permitted_scopes)
+
+            new_scopes = []
+            for scope in available:
+                checked = st.checkbox(
+                    humanize_lower(scope),
+                    value=scope in current_scopes,
+                    key=f"scope_{name}_{scope}",
+                )
+                if checked:
+                    new_scopes.append(scope)
+
+            if new_scopes != current_scopes:
+                update_scopes(name, new_scopes)
+                st.rerun()
+
+        with col_highstakes:
+            st.markdown("**High-Stakes Actions (require CIBA approval)**")
+            st.caption("Toggle which actions require human approval before executing.")
+            available_hs = get_available_high_stakes(name)
+            current_hs = list(agent.high_stakes_actions)
+
+            new_hs = []
+            for action in available_hs:
+                checked = st.checkbox(
+                    humanize_lower(action),
+                    value=action in current_hs,
+                    key=f"hs_{name}_{action}",
+                )
+                if checked:
+                    new_hs.append(action)
+
+            if new_hs != current_hs:
+                update_high_stakes(name, new_hs)
+                st.rerun()
+
+st.divider()
+
+# ============================================================
 # Inter-Agent Permission Matrix
 # ============================================================
 st.header("🔗 Inter-Agent Permission Matrix")
