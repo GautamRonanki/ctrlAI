@@ -3,6 +3,8 @@ ctrlAI Slack Bot — Employee-facing interface.
 Now powered by the LangGraph Master Orchestrator.
 Employees message the bot in natural language. The orchestrator handles routing,
 permissions, CIBA, and execution through the graph.
+
+Inter-agent commands are handled via: "inter-agent: agent1 requests action from agent2"
 """
 
 import os
@@ -16,6 +18,7 @@ from slack_bolt import App
 from slack_bolt.adapter.socket_mode import SocketModeHandler
 
 from core.logger import log_audit
+from core.inter_agent import execute_inter_agent_request, format_inter_agent_result
 
 load_dotenv()
 
@@ -59,6 +62,7 @@ def save_refresh_token(refresh_token: str, user_email: str = ""):
 # Async Helper
 # ============================================================
 
+
 def run_async(coro):
     """Run an async function from sync context."""
     loop = asyncio.new_event_loop()
@@ -69,8 +73,61 @@ def run_async(coro):
 
 
 # ============================================================
+# Inter-Agent Command Handler
+# ============================================================
+
+
+def _handle_inter_agent(text: str, event: dict, say):
+    """Handle explicit inter-agent communication requests."""
+    # Parse: "inter-agent: gmail_agent requests store_attachment from drive_agent"
+    try:
+        parts = text.split(":", 1)[1].strip()
+        tokens = parts.split()
+        if "requests" in tokens and "from" in tokens:
+            req_idx = tokens.index("requests")
+            from_idx = tokens.index("from")
+            requesting_agent = tokens[0]
+            action = "_".join(tokens[req_idx + 1 : from_idx])
+            target_agent = tokens[from_idx + 1]
+        else:
+            say(
+                "Format: `inter-agent: gmail_agent requests store_attachment from drive_agent`"
+            )
+            return
+    except (IndexError, ValueError):
+        say(
+            "Format: `inter-agent: gmail_agent requests store_attachment from drive_agent`"
+        )
+        return
+
+    say(
+        f"🔍 Checking inter-agent permission: `{requesting_agent}` → `{target_agent}`: `{action}`..."
+    )
+
+    log_audit(
+        "inter_agent_request",
+        requesting_agent,
+        f"{target_agent}:{action}",
+        "checking",
+        {"source": "slack_command"},
+    )
+
+    result = run_async(
+        execute_inter_agent_request(
+            requesting_agent=requesting_agent,
+            target_agent=target_agent,
+            action=action,
+        )
+    )
+
+    response = format_inter_agent_result(result)
+    say(response)
+
+
+# ============================================================
 # Message Handler
 # ============================================================
+
 
 @slack_app.event("message")
 def handle_message(event, say):
@@ -83,12 +140,23 @@ def handle_message(event, say):
         return
 
     logger.info(f"Slack message from {slack_user_id}: {text}")
-    log_audit("slack_message", "orchestrator", "receive", "success", {"text": text[:100]})
+    log_audit(
+        "slack_message", "orchestrator", "receive", "success", {"text": text[:100]}
+    )
+
+    # Inter-agent command
+    if text.lower().startswith("inter-agent:") or text.lower().startswith(
+        "inter agent:"
+    ):
+        _handle_inter_agent(text, event, say)
+        return
 
     # Get the refresh token
     refresh_token = get_refresh_token()
     if not refresh_token:
-        say("I don't have authentication set up yet. Please log in at the web dashboard first, then try again.")
+        say(
+            "I don't have authentication set up yet. Please log in at the web dashboard first, then try again."
+        )
         return
 
     say("🤔 Processing your request...")
@@ -96,10 +164,12 @@ def handle_message(event, say):
     # Run through the LangGraph orchestrator
     from core.orchestrator import run_orchestrator
 
-    result = run_async(run_orchestrator(
-        user_message=text,
-        refresh_token=refresh_token,
-    ))
+    result = run_async(
+        run_orchestrator(
+            user_message=text,
+            refresh_token=refresh_token,
+        )
+    )
 
     response = result.get("response", "Something went wrong.")
     agent = result.get("agent", "")
@@ -140,6 +210,7 @@ def handle_mention(event, say):
 # ============================================================
 # Start
 # ============================================================
+
 
 def start_slack_bot():
     """Start the Slack bot with Socket Mode."""
