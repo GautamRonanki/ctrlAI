@@ -50,3 +50,5 @@
 {"timestamp": "2026-03-21T05:20:42.284646+00:00", "event_type": "api_call", "agent_name": "calendar_agent", "action": "calendar:events.list", "status": "success", "user_id": null, "details": {"status_code": 200, "latency_ms": 482.7}}
 {"timestamp": "2026-03-21T05:20:54.454101+00:00", "event_type": "permission_check", "agent_name": "drive_agent", "action": "drive.readonly", "status": "allowed", "user_id": null, "details": {"reason": "scope permitted"}}
 {"timestamp": "2026-03-21T05:20:54.980211+00:00", "event_type": "api_call", "agent_name": "drive_agent", "action": "drive:files.list", "status": "success", "user_id": null, "details": {"status_code": 200, "latency_ms": 522.97}}
+{"timestamp": "2026-03-21T05:42:01.554205+00:00", "event_type": "permission_check", "agent_name": "github_agent", "action": "repo", "status": "allowed", "user_id": null, "details": {"reason": "scope permitted"}}
+{"timestamp": "2026-03-21T05:42:01.927024+00:00", "event_type": "api_call", "agent_name": "github_agent", "action": "github:repos.list", "status": "success", "user_id": null, "details": {"status_code": 200, "latency_ms": 363.76}}

@@ -43,12 +43,15 @@ async def home(request: Request):
         <p>User ID: {user.get("sub")}</p>
         <p>Has refresh token: <b>{bool(request.session.get("refresh_token"))}</b></p>
         <p>Google Connected Account: <b>{"YES" if connected else "NO"}</b></p>
+        <p>GitHub Connected Account: <b>{"YES" if request.session.get("github_connected") else "NO"}</b></p>
         <hr>
         <h3>Steps:</h3>
         <ol>
             <li>{"&#9989;" if user else "&#10060;"} <a href="/login">Login</a> (done!)</li>
             <li>{"&#9989;" if connected else "&#10145;"} <a href="/connect/google">Connect Google Account to Token Vault</a></li>
+            <li>{"&#9989;" if request.session.get("github_connected") else "&#10145;"} <a href="/connect/github">Connect GitHub Account to Token Vault</a></li>
             <li><a href="/test/gmail">Test Gmail via Token Vault</a></li>
+            <li><a href="/api/agents/github/repos">Test GitHub via Token Vault</a></li>
         </ol>
         <hr>
         <p><a href="/agents">View Agent Registry</a> | <a href="/audit">View Audit Log</a> | <a href="/logout">Logout</a></p>
@@ -302,6 +305,149 @@ async def get_token_via_vault(refresh_token: str, connection: str) -> dict:
         f"Token Vault exchange success for {connection} | expires_in={data.get('expires_in')}"
     )
     return data
+
+
+# ============================================================
+# GitHub Connected Account
+# ============================================================
+@app.get("/connect/github")
+async def connect_github(request: Request):
+    refresh_token = request.session.get("refresh_token")
+    if not refresh_token:
+        raise HTTPException(
+            status_code=401, detail="No refresh token. Login again with consent."
+        )
+
+    # Exchange refresh token for My Account API access token
+    async with httpx.AsyncClient() as client:
+        token_resp = await client.post(
+            f"https://{AUTH0_DOMAIN}/oauth/token",
+            json={
+                "grant_type": "refresh_token",
+                "client_id": AUTH0_CLIENT_ID,
+                "client_secret": AUTH0_CLIENT_SECRET,
+                "refresh_token": refresh_token,
+                "audience": f"https://{AUTH0_DOMAIN}/me/",
+                "scope": "openid profile offline_access create:me:connected_accounts read:me:connected_accounts delete:me:connected_accounts",
+            },
+        )
+
+    if token_resp.status_code != 200:
+        logger.error(
+            f"MRRT exchange failed: {token_resp.status_code} {token_resp.text}"
+        )
+        return JSONResponse(
+            {
+                "error": "Failed to get My Account API token",
+                "details": token_resp.json(),
+            },
+            status_code=400,
+        )
+
+    me_token = token_resp.json().get("access_token")
+
+    async with httpx.AsyncClient() as client:
+        response = await client.post(
+            f"https://{AUTH0_DOMAIN}/me/v1/connected-accounts/connect",
+            headers={
+                "Authorization": f"Bearer {me_token}",
+                "Content-Type": "application/json",
+            },
+            json={
+                "connection": "github",
+                "scopes": ["repo", "read:user", "user:email"],
+                "redirect_uri": f"{APP_BASE_URL}/connect/github/callback",
+            },
+        )
+
+    if response.status_code not in (200, 201):
+        logger.error(
+            f"GitHub Connected Accounts failed: {response.status_code} {response.text}"
+        )
+        return JSONResponse(
+            {
+                "error": "GitHub Connected Accounts failed",
+                "status": response.status_code,
+                "details": response.json(),
+            },
+            status_code=400,
+        )
+
+    data = response.json()
+    connect_uri = data.get("connect_uri")
+    auth_session = data.get("auth_session")
+    connect_params = data.get("connect_params", {})
+    ticket = connect_params.get("ticket")
+
+    if connect_uri and ticket:
+        request.session["github_connect_auth_session"] = auth_session
+        request.session["github_me_access_token"] = me_token
+        return RedirectResponse(f"{connect_uri}?ticket={ticket}")
+    return JSONResponse(
+        {"error": "No connect_uri or ticket", "data": data}, status_code=400
+    )
+
+
+@app.get("/connect/github/callback")
+async def connect_github_callback(request: Request):
+    # Check all possible locations for the connect_code
+    connect_code = request.query_params.get("connect_code")
+    code = request.query_params.get("code")
+
+    # Log everything we receive
+    logger.info(f"GitHub callback - query params: {dict(request.query_params)}")
+    logger.info(f"GitHub callback - full URL: {request.url}")
+
+    if connect_code:
+        return RedirectResponse(f"/connect/github/complete?connect_code={connect_code}")
+
+    if code:
+        return RedirectResponse(f"/connect/github/complete?connect_code={code}")
+
+    # If nothing in query params, try to extract from hash via JS
+    return HTMLResponse(f"""
+    <html><body><script>
+        const hash = window.location.hash.substring(1);
+        const search = window.location.search.substring(1);
+        const allParams = hash + '&' + search;
+        const params = new URLSearchParams(allParams);
+        const cc = params.get('connect_code') || params.get('code');
+        if (cc) {{ window.location.href = '/connect/github/complete?connect_code=' + cc; }}
+        else {{ document.body.innerHTML = '<p>Debug: No connect_code found.<br>Hash: ' + window.location.hash + '<br>Search: ' + window.location.search + '<br>Full URL: ' + window.location.href + '</p>'; }}
+    </script><p>Processing...</p></body></html>
+    """)
+
+
+@app.get("/connect/github/complete")
+async def connect_github_complete(request: Request, connect_code: str):
+    auth_session = request.session.get("github_connect_auth_session")
+    access_token = request.session.get("github_me_access_token")
+    if not auth_session or not access_token:
+        raise HTTPException(status_code=401, detail="Session expired. Login again.")
+
+    async with httpx.AsyncClient() as client:
+        response = await client.post(
+            f"https://{AUTH0_DOMAIN}/me/v1/connected-accounts/complete",
+            headers={
+                "Authorization": f"Bearer {access_token}",
+                "Content-Type": "application/json",
+            },
+            json={
+                "auth_session": auth_session,
+                "connect_code": connect_code,
+                "redirect_uri": f"{APP_BASE_URL}/connect/github/callback",
+            },
+        )
+
+    if response.status_code in (200, 201):
+        request.session["github_connected"] = True
+        logger.info("GitHub Connected Account linked!")
+        return RedirectResponse("/")
+    logger.error(f"GitHub connection failed: {response.text}")
+    return JSONResponse(
+        {"error": "GitHub connection failed", "details": response.json()},
+        status_code=400,
+    )
 
 
 @app.get("/test/gmail")
