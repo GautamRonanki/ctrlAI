@@ -132,6 +132,12 @@ async def callback(request: Request):
     if refresh_token:
         request.session["refresh_token"] = refresh_token
 
+    # Persist refresh token for Slack bot / orchestrator
+    if refresh_token:
+        from slack_bot.app import save_refresh_token
+
+        save_refresh_token(refresh_token, user.get("email", ""))
+
     logger.info(
         f"Login: {user.get('email')} | refresh_token={refresh_token is not None}"
     )
