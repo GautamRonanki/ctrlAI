@@ -1,5 +1,5 @@
 {
-  "timestamp": "2026-03-21T18:27:12.742968+00:00",
+  "timestamp": "2026-03-21T18:28:58.708797+00:00",
   "categories": {
     "permission": {
       "tests": [
@@ -221,7 +221,7 @@
           "agent_correct": true,
           "action_correct": true,
           "passed": true,
-          "latency_ms": 772.7
+          "latency_ms": 1087.9
         },
         {
           "id": "route_gmail_search",
@@ -234,7 +234,7 @@
           "agent_correct": true,
           "action_correct": true,
           "passed": true,
-          "latency_ms": 712.3
+          "latency_ms": 1515.2
         },
         {
           "id": "route_gmail_send",
@@ -247,7 +247,7 @@
           "agent_correct": true,
           "action_correct": true,
           "passed": true,
-          "latency_ms": 1231.7
+          "latency_ms": 1167.4
         },
         {
           "id": "route_calendar_list",
@@ -260,7 +260,7 @@
           "agent_correct": true,
           "action_correct": true,
           "passed": true,
-          "latency_ms": 697.8
+          "latency_ms": 674.8
         },
         {
           "id": "route_drive_list",
@@ -273,7 +273,7 @@
           "agent_correct": true,
           "action_correct": true,
           "passed": true,
-          "latency_ms": 694.1
+          "latency_ms": 1308.9
         },
         {
           "id": "route_drive_search",
@@ -286,7 +286,7 @@
           "agent_correct": true,
           "action_correct": true,
           "passed": true,
-          "latency_ms": 649.0
+          "latency_ms": 740.4
         },
         {
           "id": "route_github_repos",
@@ -299,7 +299,7 @@
           "agent_correct": true,
           "action_correct": true,
           "passed": true,
-          "latency_ms": 891.8
+          "latency_ms": 642.5
         },
         {
           "id": "route_github_issues",
@@ -312,7 +312,7 @@
           "agent_correct": true,
           "action_correct": true,
           "passed": true,
-          "latency_ms": 957.1
+          "latency_ms": 745.7
         },
         {
           "id": "route_none",
@@ -325,7 +325,7 @@
           "agent_correct": true,
           "action_correct": true,
           "passed": true,
-          "latency_ms": 721.4
+          "latency_ms": 761.6
         },
         {
           "id": "route_calendar_create",
@@ -338,7 +338,7 @@
           "agent_correct": true,
           "action_correct": true,
           "passed": true,
-          "latency_ms": 1101.7
+          "latency_ms": 1095.8
         }
       ],
       "total": 10,

@@ -600,6 +600,71 @@ else:
 st.divider()
 
 # ============================================================
+# Evaluation Results
+# ============================================================
+st.header("🧪 Evaluation Results")
+
+from core.evals import load_eval_results, run_all_evals
+
+eval_results = load_eval_results()
+
+col_run, col_info = st.columns([1, 3])
+with col_run:
+    if st.button("▶️ Run Evals"):
+        with st.spinner("Running 28 tests..."):
+            eval_results = run_async(run_all_evals(include_routing=True))
+            st.rerun()
+with col_info:
+    if eval_results:
+        st.caption(f"Last run: {eval_results.get('timestamp', '?')[:19]}")
+    else:
+        st.caption("No eval results yet. Click Run Evals to test the system.")
+
+if eval_results:
+    summary = eval_results.get("summary", {})
+
+    # Overall score
+    total = summary.get("total_tests", 0)
+    passed = summary.get("total_passed", 0)
+    rate = summary.get("pass_rate", 0)
+
+    e1, e2, e3, e4 = st.columns(4)
+    with e1:
+        st.metric("Total Tests", total)
+    with e2:
+        st.metric("Passed", passed)
+    with e3:
+        st.metric("Failed", summary.get("total_failed", 0))
+    with e4:
+        st.metric("Pass Rate", f"{rate}%")
+
+    # Per-category results
+    categories = eval_results.get("categories", {})
+    cat_tabs = st.tabs([humanize(cat) for cat in categories.keys()])
+
+    for tab, (cat_name, cat_data) in zip(cat_tabs, categories.items()):
+        with tab:
+            cat_passed = cat_data.get("passed", 0)
+            cat_total = cat_data.get("total", 0)
+            st.markdown(f"**{cat_passed}/{cat_total} passed**")
+
+            for test in cat_data.get("tests", []):
+                icon = "✅" if test.get("passed") else "❌"
+                desc = test.get("description") or test.get("query", test.get("id", "?"))
+
+                if test.get("passed"):
+                    st.markdown(f"{icon} {desc}")
+                else:
+                    st.markdown(f"{icon} {desc}")
+                    if "expected_agent" in test:
+                        st.markdown(
+                            f"&nbsp;&nbsp;&nbsp;&nbsp;Expected: `{test['expected_agent']}/{test['expected_action']}` | "
+                            f"Got: `{test.get('actual_agent', '?')}/{test.get('actual_action', '?')}`"
+                        )
+
+st.divider()
+
+# ============================================================
 # LLM Usage Stats
 # ============================================================
 st.header("💰 LLM Usage Stats")
