@@ -5,6 +5,7 @@ Employees message the bot in natural language. The orchestrator handles routing,
 permissions, CIBA, and execution through the graph.
 
 Inter-agent commands are handled via: "inter-agent: agent1 requests action from agent2"
+Cross-agent workflows are triggered by natural language (e.g., "prepare for my next meeting")
 """
 
 import os
@@ -19,6 +20,7 @@ from slack_bolt.adapter.socket_mode import SocketModeHandler
 
 from core.logger import log_audit
 from core.inter_agent import execute_inter_agent_request, format_inter_agent_result
+from core.workflows import meeting_prep_workflow, format_workflow_result
 
 load_dotenv()
 
@@ -149,6 +151,44 @@ def handle_message(event, say):
         "inter agent:"
     ):
         _handle_inter_agent(text, event, say)
+        return
+
+    # Cross-agent workflow: meeting prep
+    if any(
+        phrase in text.lower()
+        for phrase in [
+            "prepare for my meeting",
+            "meeting prep",
+            "next meeting",
+            "brief me",
+            "meeting briefing",
+            "prepare me for my meeting",
+        ]
+    ):
+        refresh_token = get_refresh_token()
+        if not refresh_token:
+            say(
+                "I don't have authentication set up yet. Please log in at the web dashboard first."
+            )
+            return
+        say(
+            "📋 Preparing your meeting briefing — checking calendar, emails, and files..."
+        )
+        result = run_async(meeting_prep_workflow(refresh_token))
+        response = format_workflow_result(result)
+        say(response)
+        # Post the execution trace in thread
+        steps = result.get("steps", [])
+        if steps:
+            trace_lines = ["📋 *Workflow execution trace:*"]
+            for step in steps:
+                node = step.get("step", "?").replace("_", " ").title()
+                status = step.get("status", "?")
+                note = step.get("note", "")
+                trace_lines.append(f"  → {node}: {status}")
+                if note:
+                    trace_lines.append(f"    _{note}_")
+            say("\n".join(trace_lines), thread_ts=event.get("ts"))
         return
 
     # Get the refresh token

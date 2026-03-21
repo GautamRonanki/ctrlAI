@@ -19,9 +19,12 @@ async def list_events(
 ) -> dict:
     """List upcoming calendar events."""
     if not check_scope_permission(agent_name, "calendar.events.readonly"):
-        return {"error": f"Permission denied: {agent_name} does not have calendar.events.readonly scope"}
+        return {
+            "error": f"Permission denied: {agent_name} does not have calendar.events.readonly scope"
+        }
 
     from datetime import datetime, timezone
+
     now = datetime.now(timezone.utc).isoformat()
 
     start = time.time()
@@ -33,6 +36,7 @@ async def list_events(
                 "timeMin": now,
                 "singleEvents": "true",
                 "orderBy": "startTime",
+                "fields": "items(id,summary,start,end,location,description,attendees,status)",
             },
             headers={"Authorization": f"Bearer {google_token}"},
         )
@@ -40,19 +44,31 @@ async def list_events(
     log_api_call(agent_name, "calendar", "events.list", response.status_code, latency)
 
     if response.status_code != 200:
-        return {"error": f"Calendar API error: {response.status_code}", "details": response.json()}
+        return {
+            "error": f"Calendar API error: {response.status_code}",
+            "details": response.json(),
+        }
 
     events = response.json().get("items", [])
     results = []
     for event in events:
-        results.append({
-            "id": event.get("id"),
-            "summary": event.get("summary", "No title"),
-            "start": event.get("start", {}).get("dateTime", event.get("start", {}).get("date", "")),
-            "end": event.get("end", {}).get("dateTime", event.get("end", {}).get("date", "")),
-            "location": event.get("location", ""),
-            "status": event.get("status", ""),
-        })
+        attendees = [a.get("email", "") for a in event.get("attendees", [])]
+        results.append(
+            {
+                "id": event.get("id"),
+                "summary": event.get("summary", "No title"),
+                "start": event.get("start", {}).get(
+                    "dateTime", event.get("start", {}).get("date", "")
+                ),
+                "end": event.get("end", {}).get(
+                    "dateTime", event.get("end", {}).get("date", "")
+                ),
+                "location": event.get("location", ""),
+                "description": event.get("description", ""),
+                "attendees": attendees,
+                "status": event.get("status", ""),
+            }
+        )
 
     return {"count": len(results), "events": results}
 
@@ -73,7 +89,9 @@ async def create_event(
     start_time and end_time should be ISO format (e.g., "2026-03-21T10:00:00-04:00")
     """
     if not check_scope_permission(agent_name, "calendar.events"):
-        return {"error": f"Permission denied: {agent_name} does not have calendar.events scope"}
+        return {
+            "error": f"Permission denied: {agent_name} does not have calendar.events scope"
+        }
 
     if is_high_stakes(agent_name, "create_event"):
         log_audit(
@@ -108,7 +126,10 @@ async def create_event(
     log_api_call(agent_name, "calendar", "events.create", response.status_code, latency)
 
     if response.status_code != 200:
-        return {"error": f"Create event failed: {response.status_code}", "details": response.json()}
+        return {
+            "error": f"Create event failed: {response.status_code}",
+            "details": response.json(),
+        }
 
     result = response.json()
     log_audit(
@@ -119,4 +140,8 @@ async def create_event(
         details={"summary": summary, "event_id": result.get("id")},
     )
 
-    return {"status": "created", "event_id": result.get("id"), "link": result.get("htmlLink", "")}
+    return {
+        "status": "created",
+        "event_id": result.get("id"),
+        "link": result.get("htmlLink", ""),
+    }
