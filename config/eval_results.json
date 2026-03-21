@@ -1,0 +1,355 @@
+{
+  "timestamp": "2026-03-21T18:27:12.742968+00:00",
+  "categories": {
+    "permission": {
+      "tests": [
+        {
+          "id": "perm_gmail_read_allowed",
+          "category": "permission",
+          "description": "Gmail Agent should have read access",
+          "agent": "gmail_agent",
+          "scope": "gmail.readonly",
+          "expected": true,
+          "actual": true,
+          "passed": true
+        },
+        {
+          "id": "perm_gmail_send_allowed",
+          "category": "permission",
+          "description": "Gmail Agent should have send access",
+          "agent": "gmail_agent",
+          "scope": "gmail.send",
+          "expected": true,
+          "actual": true,
+          "passed": true
+        },
+        {
+          "id": "perm_drive_cross_agent",
+          "category": "permission",
+          "description": "Gmail Agent should NOT have Drive access",
+          "agent": "gmail_agent",
+          "scope": "drive.readonly",
+          "expected": false,
+          "actual": false,
+          "passed": true
+        },
+        {
+          "id": "perm_github_cross_agent",
+          "category": "permission",
+          "description": "Calendar Agent should NOT have GitHub access",
+          "agent": "calendar_agent",
+          "scope": "repo",
+          "expected": false,
+          "actual": false,
+          "passed": true
+        },
+        {
+          "id": "perm_drive_read_allowed",
+          "category": "permission",
+          "description": "Drive Agent should have read access",
+          "agent": "drive_agent",
+          "scope": "drive.readonly",
+          "expected": true,
+          "actual": true,
+          "passed": true
+        },
+        {
+          "id": "perm_github_repo_allowed",
+          "category": "permission",
+          "description": "GitHub Agent should have repo access",
+          "agent": "github_agent",
+          "scope": "repo",
+          "expected": true,
+          "actual": true,
+          "passed": true
+        }
+      ],
+      "total": 6,
+      "passed": 6,
+      "failed": 0
+    },
+    "ciba": {
+      "tests": [
+        {
+          "id": "ciba_gmail_send",
+          "category": "ciba",
+          "description": "Sending email should require CIBA approval",
+          "agent": "gmail_agent",
+          "action": "send_email",
+          "expected_high_stakes": true,
+          "actual_high_stakes": true,
+          "passed": true
+        },
+        {
+          "id": "ciba_gmail_list",
+          "category": "ciba",
+          "description": "Listing emails should NOT require CIBA",
+          "agent": "gmail_agent",
+          "action": "list_emails",
+          "expected_high_stakes": false,
+          "actual_high_stakes": false,
+          "passed": true
+        },
+        {
+          "id": "ciba_drive_delete",
+          "category": "ciba",
+          "description": "Deleting a file should require CIBA approval",
+          "agent": "drive_agent",
+          "action": "delete_file",
+          "expected_high_stakes": true,
+          "actual_high_stakes": true,
+          "passed": true
+        },
+        {
+          "id": "ciba_calendar_create",
+          "category": "ciba",
+          "description": "Creating an event should require CIBA approval",
+          "agent": "calendar_agent",
+          "action": "create_event",
+          "expected_high_stakes": true,
+          "actual_high_stakes": true,
+          "passed": true
+        },
+        {
+          "id": "ciba_github_comment",
+          "category": "ciba",
+          "description": "Posting a GitHub comment should require CIBA",
+          "agent": "github_agent",
+          "action": "create_comment",
+          "expected_high_stakes": true,
+          "actual_high_stakes": true,
+          "passed": true
+        },
+        {
+          "id": "ciba_drive_list",
+          "category": "ciba",
+          "description": "Listing files should NOT require CIBA",
+          "agent": "drive_agent",
+          "action": "list_files",
+          "expected_high_stakes": false,
+          "actual_high_stakes": false,
+          "passed": true
+        }
+      ],
+      "total": 6,
+      "passed": 6,
+      "failed": 0
+    },
+    "inter_agent": {
+      "tests": [
+        {
+          "id": "ia_gmail_drive_store",
+          "category": "inter_agent",
+          "description": "Gmail Agent should be allowed to store attachments in Drive",
+          "requesting": "gmail_agent",
+          "target": "drive_agent",
+          "action": "store_attachment",
+          "expected": true,
+          "actual": true,
+          "passed": true
+        },
+        {
+          "id": "ia_gmail_drive_delete",
+          "category": "inter_agent",
+          "description": "Gmail Agent should NOT be allowed to delete Drive files",
+          "requesting": "gmail_agent",
+          "target": "drive_agent",
+          "action": "delete_file",
+          "expected": false,
+          "actual": false,
+          "passed": true
+        },
+        {
+          "id": "ia_calendar_gmail_read",
+          "category": "inter_agent",
+          "description": "Calendar Agent should be allowed to read email context",
+          "requesting": "calendar_agent",
+          "target": "gmail_agent",
+          "action": "read_email_context",
+          "expected": true,
+          "actual": true,
+          "passed": true
+        },
+        {
+          "id": "ia_drive_gmail_send",
+          "category": "inter_agent",
+          "description": "Drive Agent should NOT be allowed to send emails",
+          "requesting": "drive_agent",
+          "target": "gmail_agent",
+          "action": "send_email",
+          "expected": false,
+          "actual": false,
+          "passed": true
+        },
+        {
+          "id": "ia_github_calendar_create",
+          "category": "inter_agent",
+          "description": "GitHub Agent should NOT be allowed to create calendar events",
+          "requesting": "github_agent",
+          "target": "calendar_agent",
+          "action": "create_event",
+          "expected": false,
+          "actual": false,
+          "passed": true
+        },
+        {
+          "id": "ia_github_gmail_read",
+          "category": "inter_agent",
+          "description": "GitHub Agent should be allowed to read email context",
+          "requesting": "github_agent",
+          "target": "gmail_agent",
+          "action": "read_email_context",
+          "expected": true,
+          "actual": true,
+          "passed": true
+        }
+      ],
+      "total": 6,
+      "passed": 6,
+      "failed": 0
+    },
+    "routing": {
+      "tests": [
+        {
+          "id": "route_gmail_list",
+          "category": "routing",
+          "query": "Show me my recent emails",
+          "expected_agent": "gmail_agent",
+          "expected_action": "list_emails",
+          "actual_agent": "gmail_agent",
+          "actual_action": "list_emails",
+          "agent_correct": true,
+          "action_correct": true,
+          "passed": true,
+          "latency_ms": 772.7
+        },
+        {
+          "id": "route_gmail_search",
+          "category": "routing",
+          "query": "Search my emails for invoices",
+          "expected_agent": "gmail_agent",
+          "expected_action": "search_emails",
+          "actual_agent": "gmail_agent",
+          "actual_action": "search_emails",
+          "agent_correct": true,
+          "action_correct": true,
+          "passed": true,
+          "latency_ms": 712.3
+        },
+        {
+          "id": "route_gmail_send",
+          "category": "routing",
+          "query": "Send an email to john@example.com saying hello",
+          "expected_agent": "gmail_agent",
+          "expected_action": "send_email",
+          "actual_agent": "gmail_agent",
+          "actual_action": "send_email",
+          "agent_correct": true,
+          "action_correct": true,
+          "passed": true,
+          "latency_ms": 1231.7
+        },
+        {
+          "id": "route_calendar_list",
+          "category": "routing",
+          "query": "What's on my calendar this week?",
+          "expected_agent": "calendar_agent",
+          "expected_action": "list_events",
+          "actual_agent": "calendar_agent",
+          "actual_action": "list_events",
+          "agent_correct": true,
+          "action_correct": true,
+          "passed": true,
+          "latency_ms": 697.8
+        },
+        {
+          "id": "route_drive_list",
+          "category": "routing",
+          "query": "Show me my recent files in Drive",
+          "expected_agent": "drive_agent",
+          "expected_action": "list_files",
+          "actual_agent": "drive_agent",
+          "actual_action": "list_files",
+          "agent_correct": true,
+          "action_correct": true,
+          "passed": true,
+          "latency_ms": 694.1
+        },
+        {
+          "id": "route_drive_search",
+          "category": "routing",
+          "query": "Find the quarterly report in my Drive",
+          "expected_agent": "drive_agent",
+          "expected_action": "search_files",
+          "actual_agent": "drive_agent",
+          "actual_action": "search_files",
+          "agent_correct": true,
+          "action_correct": true,
+          "passed": true,
+          "latency_ms": 649.0
+        },
+        {
+          "id": "route_github_repos",
+          "category": "routing",
+          "query": "Show me my GitHub repositories",
+          "expected_agent": "github_agent",
+          "expected_action": "list_repos",
+          "actual_agent": "github_agent",
+          "actual_action": "list_repos",
+          "agent_correct": true,
+          "action_correct": true,
+          "passed": true,
+          "latency_ms": 891.8
+        },
+        {
+          "id": "route_github_issues",
+          "category": "routing",
+          "query": "List open issues in my ctrlAI repo",
+          "expected_agent": "github_agent",
+          "expected_action": "list_issues",
+          "actual_agent": "github_agent",
+          "actual_action": "list_issues",
+          "agent_correct": true,
+          "action_correct": true,
+          "passed": true,
+          "latency_ms": 957.1
+        },
+        {
+          "id": "route_none",
+          "category": "routing",
+          "query": "What is the meaning of life?",
+          "expected_agent": "none",
+          "expected_action": "none",
+          "actual_agent": "none",
+          "actual_action": "none",
+          "agent_correct": true,
+          "action_correct": true,
+          "passed": true,
+          "latency_ms": 721.4
+        },
+        {
+          "id": "route_calendar_create",
+          "category": "routing",
+          "query": "Create a meeting for tomorrow at 3pm called Team Standup",
+          "expected_agent": "calendar_agent",
+          "expected_action": "create_event",
+          "actual_agent": "calendar_agent",
+          "actual_action": "create_event",
+          "agent_correct": true,
+          "action_correct": true,
+          "passed": true,
+          "latency_ms": 1101.7
+        }
+      ],
+      "total": 10,
+      "passed": 10,
+      "failed": 0
+    }
+  },
+  "summary": {
+    "total_tests": 28,
+    "total_passed": 28,
+    "total_failed": 0,
+    "pass_rate": 100.0
+  }
+}
