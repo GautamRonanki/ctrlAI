@@ -272,67 +272,52 @@ async def connect_google_complete(request: Request, connect_code: str):
     )
 
 
-@app.get("/test/gmail")
-async def test_gmail(request: Request):
-    user = request.session.get("user")
-    if not user:
-        raise HTTPException(status_code=401, detail="Not logged in.")
-
-    user_id = user.get("sub")
-
-    # Step 1: Get a Management API token
+async def get_token_via_vault(refresh_token: str, connection: str) -> dict:
+    """
+    Exchange an Auth0 refresh token for an external provider's access token via Token Vault.
+    This is the production pattern — agents call this, never the Management API.
+    """
     async with httpx.AsyncClient() as client:
-        mgmt_token_resp = await client.post(
+        response = await client.post(
             f"https://{AUTH0_DOMAIN}/oauth/token",
             json={
-                "grant_type": "client_credentials",
                 "client_id": AUTH0_CLIENT_ID,
                 "client_secret": AUTH0_CLIENT_SECRET,
-                "audience": f"https://{AUTH0_DOMAIN}/api/v2/",
+                "subject_token": refresh_token,
+                "grant_type": "urn:auth0:params:oauth:grant-type:token-exchange:federated-connection-access-token",
+                "subject_token_type": "urn:ietf:params:oauth:token-type:refresh_token",
+                "requested_token_type": "http://auth0.com/oauth/token-type/federated-connection-access-token",
+                "connection": connection,
             },
         )
 
-    if mgmt_token_resp.status_code != 200:
-        return JSONResponse(
-            {
-                "error": "Failed to get management token",
-                "details": mgmt_token_resp.json(),
-            },
-            status_code=400,
+    if response.status_code != 200:
+        logger.error(
+            f"Token Vault exchange failed for {connection}: {response.status_code} {response.text}"
         )
+        return None
 
-    mgmt_token = mgmt_token_resp.json().get("access_token")
+    data = response.json()
+    logger.info(
+        f"Token Vault exchange success for {connection} | expires_in={data.get('expires_in')}"
+    )
+    return data
 
-    # Step 2: Get user profile with identities (includes Google access token)
-    async with httpx.AsyncClient() as client:
-        user_resp = await client.get(
-            f"https://{AUTH0_DOMAIN}/api/v2/users/{user_id}",
-            headers={"Authorization": f"Bearer {mgmt_token}"},
-        )
 
-    if user_resp.status_code != 200:
-        return JSONResponse(
-            {"error": "Failed to get user profile", "details": user_resp.json()},
-            status_code=400,
-        )
+@app.get("/test/gmail")
+async def test_gmail(request: Request):
+    refresh_token = request.session.get("refresh_token")
+    if not refresh_token:
+        raise HTTPException(status_code=401, detail="No refresh token. Login again.")
 
-    user_data = user_resp.json()
-    identities = user_data.get("identities", [])
+    # Get Google token via Token Vault exchange (the proper pattern)
+    token_data = await get_token_via_vault(refresh_token, "google-oauth2")
+    if not token_data:
+        return JSONResponse({"error": "Token Vault exchange failed"}, status_code=400)
 
-    # Find Google identity and extract access token
-    google_token = None
-    for identity in identities:
-        if identity.get("provider") == "google-oauth2":
-            google_token = identity.get("access_token")
-            break
+    google_token = token_data.get("access_token")
 
-    if not google_token:
-        return JSONResponse(
-            {"error": "No Google access token found in user identities"},
-            status_code=400,
-        )
-
-    # Step 3: Use the Google token to read Gmail
+    # Use the Google token to read Gmail
     async with httpx.AsyncClient() as client:
         gmail_response = await client.get(
             "https://gmail.googleapis.com/gmail/v1/users/me/messages?maxResults=5",
@@ -347,7 +332,10 @@ async def test_gmail(request: Request):
 
     messages = gmail_response.json().get("messages", [])
     return {
-        "status": "SUCCESS — Google token retrieved via Management API!",
+        "status": "SUCCESS — Token retrieved via Token Vault exchange!",
+        "method": "Token Vault (refresh token exchange)",
+        "scopes": token_data.get("scope"),
+        "expires_in": token_data.get("expires_in"),
         "gmail_messages_count": len(messages),
         "message_ids": [m["id"] for m in messages],
     }
