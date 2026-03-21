@@ -6,6 +6,7 @@ permissions, CIBA, and execution through the graph.
 
 Inter-agent commands are handled via: "inter-agent: agent1 requests action from agent2"
 Cross-agent workflows are triggered by natural language (e.g., "prepare for my next meeting")
+Every interaction ends with a session summary showing what was accessed and why.
 """
 
 import os
@@ -33,9 +34,6 @@ slack_app = App(token=os.getenv("SLACK_BOT_TOKEN"))
 # ============================================================
 # Refresh Token Persistence
 # ============================================================
-# The refresh token is obtained when a user logs in via the web UI (FastAPI).
-# We persist it to a file so the Slack bot can access it without a web session.
-# This file is written by the FastAPI callback and read by the Slack bot.
 
 TOKEN_STORE_PATH = Path(__file__).parent.parent / "config" / "token_store.json"
 
@@ -48,7 +46,6 @@ def get_refresh_token() -> str:
             return data.get("refresh_token", "")
         except (json.JSONDecodeError, Exception):
             pass
-    # Fallback to env var
     return os.getenv("AUTH0_REFRESH_TOKEN", "")
 
 
@@ -74,6 +71,185 @@ def run_async(coro):
         loop.close()
 
 
+def humanize(text: str) -> str:
+    """Convert underscore_text to human readable."""
+    return text.replace("_", " ").title()
+
+
+def humanize_lower(text: str) -> str:
+    """Convert underscore_text to human readable lowercase."""
+    return text.replace("_", " ")
+
+
+# ============================================================
+# Session Summary Builder
+# ============================================================
+
+
+def build_session_summary(
+    steps: list,
+    agent: str = "",
+    action: str = "",
+    ciba_status: str = None,
+    source: str = "orchestrator",
+) -> str:
+    """
+    Build a human-readable session summary from execution steps.
+    This is the transparency layer — the user sees exactly what happened.
+    """
+    lines = []
+    lines.append("🔒 *Session Summary — What ctrlAI accessed on your behalf:*")
+    lines.append("")
+
+    # Services accessed
+    services_accessed = set()
+    permissions_checked = []
+    permissions_denied = []
+    ciba_events = []
+    inter_agent_events = []
+
+    for step in steps:
+        node = step.get("node") or step.get("step", "")
+        status = step.get("status", "")
+
+        if "agent" in step:
+            agent_name = step["agent"]
+            if agent_name and agent_name != "none":
+                # Map agent to service
+                service_map = {
+                    "gmail_agent": "Gmail",
+                    "calendar_agent": "Google Calendar",
+                    "drive_agent": "Google Drive",
+                    "github_agent": "GitHub",
+                }
+                service = service_map.get(agent_name, agent_name)
+                services_accessed.add(service)
+
+        if node == "permission_gate":
+            if status == "allowed":
+                permissions_checked.append(
+                    f"✅ {humanize(step.get('agent', '?'))}: {humanize_lower(step.get('scope', step.get('action', '?')))} — allowed"
+                )
+            elif status in ("denied", "agent_suspended", "permission_denied"):
+                permissions_denied.append(
+                    f"🚫 {humanize(step.get('agent', '?'))}: {status.replace('_', ' ')}"
+                )
+
+        if node == "ciba_checkpoint":
+            if status == "approved":
+                ciba_events.append(
+                    "✅ Human approval granted via Guardian push notification"
+                )
+            elif status == "not_required":
+                pass  # Don't show — not interesting
+            elif status:
+                ciba_events.append(f"🚫 Human approval {status}")
+
+        # Inter-agent events from workflow steps
+        if step.get("source", "").startswith("inter-agent"):
+            inter_agent_events.append(
+                f"🔗 {humanize(step.get('step', '?'))}: {status} ({step.get('source', '')})"
+            )
+
+    # Build the summary
+    if services_accessed:
+        lines.append(f"*Services accessed:* {', '.join(sorted(services_accessed))}")
+    else:
+        lines.append("*Services accessed:* None")
+
+    if agent:
+        lines.append(f"*Agent used:* {humanize(agent)}")
+    if action:
+        lines.append(f"*Action performed:* {humanize_lower(action)}")
+
+    if permissions_checked:
+        lines.append("")
+        lines.append("*Permission checks:*")
+        for p in permissions_checked:
+            lines.append(f"  {p}")
+
+    if permissions_denied:
+        lines.append("")
+        lines.append("*Permissions denied:*")
+        for p in permissions_denied:
+            lines.append(f"  {p}")
+
+    if ciba_events:
+        lines.append("")
+        lines.append("*Human-in-the-loop (CIBA):*")
+        for c in ciba_events:
+            lines.append(f"  {c}")
+
+    if inter_agent_events:
+        lines.append("")
+        lines.append("*Inter-agent communication:*")
+        for ia in inter_agent_events:
+            lines.append(f"  {ia}")
+
+    lines.append("")
+    lines.append(
+        f"_Total steps: {len(steps)} | Full trace available in the admin dashboard_"
+    )
+
+    return "\n".join(lines)
+
+
+def build_workflow_summary(result: dict) -> str:
+    """Build a session summary specifically for cross-agent workflows."""
+    lines = []
+    lines.append("🔒 *Session Summary — What ctrlAI accessed on your behalf:*")
+    lines.append("")
+
+    # Services accessed
+    steps = result.get("steps", [])
+    services = set()
+    for step in steps:
+        step_name = step.get("step", "")
+        if "gmail" in step_name:
+            services.add("Gmail")
+        elif "calendar" in step_name:
+            services.add("Google Calendar")
+        elif "drive" in step_name:
+            services.add("Google Drive")
+        elif "github" in step_name:
+            services.add("GitHub")
+
+    lines.append(
+        f"*Services accessed:* {', '.join(sorted(services)) if services else 'None'}"
+    )
+    lines.append(f"*Workflow:* Meeting Preparation Briefing")
+
+    # Inter-agent permissions
+    ia_results = result.get("inter_agent_results", [])
+    if ia_results:
+        lines.append("")
+        lines.append("*Inter-agent permissions enforced:*")
+        for r in ia_results:
+            icon = "✅" if r["status"] == "allowed" else "🚫"
+            lines.append(
+                f"  {icon} {r['requesting']} → {r['target']}: {r['action']} — {r['status']}"
+            )
+
+    # Step details
+    lines.append("")
+    lines.append("*Execution steps:*")
+    for step in steps:
+        step_name = humanize(step.get("step", "?"))
+        status = step.get("status", "?")
+        note = step.get("note", "")
+        icon = "✅" if status == "success" else "🚫" if "denied" in status else "ℹ️"
+        lines.append(f"  {icon} {step_name}: {status}")
+        if note:
+            lines.append(f"      _{note}_")
+
+    lines.append("")
+    lines.append(
+        f"_Total steps: {len(steps)} | Full trace available in the admin dashboard_"
+    )
+
+    return "\n".join(lines)
+
+
 # ============================================================
 # Inter-Agent Command Handler
 # ============================================================
@@ -81,7 +257,6 @@ def run_async(coro):
 
 def _handle_inter_agent(text: str, event: dict, say):
     """Handle explicit inter-agent communication requests."""
-    # Parse: "inter-agent: gmail_agent requests store_attachment from drive_agent"
     try:
         parts = text.split(":", 1)[1].strip()
         tokens = parts.split()
@@ -136,6 +311,7 @@ def handle_message(event, say):
     """Handle incoming Slack messages via the LangGraph orchestrator."""
     text = event.get("text", "").strip()
     slack_user_id = event.get("user", "")
+    message_ts = event.get("ts")
 
     # Ignore bot messages
     if event.get("bot_id") or not text:
@@ -177,18 +353,10 @@ def handle_message(event, say):
         result = run_async(meeting_prep_workflow(refresh_token))
         response = format_workflow_result(result)
         say(response)
-        # Post the execution trace in thread
-        steps = result.get("steps", [])
-        if steps:
-            trace_lines = ["📋 *Workflow execution trace:*"]
-            for step in steps:
-                node = step.get("step", "?").replace("_", " ").title()
-                status = step.get("status", "?")
-                note = step.get("note", "")
-                trace_lines.append(f"  → {node}: {status}")
-                if note:
-                    trace_lines.append(f"    _{note}_")
-            say("\n".join(trace_lines), thread_ts=event.get("ts"))
+
+        # Post session summary in thread
+        summary = build_workflow_summary(result)
+        say(summary, thread_ts=message_ts)
         return
 
     # Get the refresh token
@@ -215,6 +383,7 @@ def handle_message(event, say):
     agent = result.get("agent", "")
     action = result.get("action", "")
     steps = result.get("steps", [])
+    ciba_status = result.get("ciba_status")
 
     # Log the full trace
     log_audit(
@@ -228,17 +397,15 @@ def handle_message(event, say):
     # Post the response
     say(response)
 
-    # If there are steps, post a trace summary in a thread (for observability)
-    if steps and len(steps) > 1:
-        trace_lines = ["📋 *Execution trace:*"]
-        for step in steps:
-            node = step.get("node", "?")
-            status = step.get("status", "?")
-            trace_lines.append(f"  → `{node}`: {status}")
-        say(
-            "\n".join(trace_lines),
-            thread_ts=event.get("ts"),  # Reply in thread
+    # Post session summary in thread
+    if steps:
+        summary = build_session_summary(
+            steps=steps,
+            agent=agent,
+            action=action,
+            ciba_status=ciba_status,
         )
+        say(summary, thread_ts=message_ts)
 
 
 @slack_app.event("app_mention")
