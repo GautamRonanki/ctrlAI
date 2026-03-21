@@ -12,25 +12,25 @@ router = APIRouter(prefix="/api/agents", tags=["agents"])
 
 
 async def _get_google_token_or_fail(request: Request) -> str:
-    user = request.session.get("user")
-    if not user:
-        raise HTTPException(status_code=401, detail="Not logged in.")
-    token = await get_google_token(user.get("sub"))
+    refresh_token = request.session.get("refresh_token")
+    if not refresh_token:
+        raise HTTPException(status_code=401, detail="No refresh token. Login again.")
+    token = await get_google_token(refresh_token)
     if not token:
         raise HTTPException(
-            status_code=400, detail="No Google token. Re-login with Google."
+            status_code=400, detail="Token Vault exchange failed. Connect Google first."
         )
     return token
 
 
 async def _get_github_token_or_fail(request: Request) -> str:
-    user = request.session.get("user")
-    if not user:
-        raise HTTPException(status_code=401, detail="Not logged in.")
-    token = await get_github_token(user.get("sub"))
+    refresh_token = request.session.get("refresh_token")
+    if not refresh_token:
+        raise HTTPException(status_code=401, detail="No refresh token. Login again.")
+    token = await get_github_token(refresh_token)
     if not token:
         raise HTTPException(
-            status_code=400, detail="No GitHub token. Login with GitHub required."
+            status_code=400, detail="Token Vault exchange failed. Connect GitHub first."
         )
     return token
 

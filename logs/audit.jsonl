@@ -44,3 +44,5 @@
 {"timestamp": "2026-03-20T21:21:27.456697+00:00", "event_type": "routing", "agent_name": "orchestrator", "action": "drive_agent/search_files", "status": "success", "user_id": null, "details": {"params": {"query": "Fitness Tracker"}}}
 {"timestamp": "2026-03-20T21:21:27.698226+00:00", "event_type": "permission_check", "agent_name": "drive_agent", "action": "drive.readonly", "status": "allowed", "user_id": null, "details": {"reason": "scope permitted"}}
 {"timestamp": "2026-03-20T21:21:28.109121+00:00", "event_type": "api_call", "agent_name": "drive_agent", "action": "drive:files.search", "status": "success", "user_id": null, "details": {"status_code": 200, "latency_ms": 407.6}}
+{"timestamp": "2026-03-21T05:19:54.885860+00:00", "event_type": "permission_check", "agent_name": "gmail_agent", "action": "gmail.readonly", "status": "allowed", "user_id": null, "details": {"reason": "scope permitted"}}
+{"timestamp": "2026-03-21T05:19:55.164725+00:00", "event_type": "api_call", "agent_name": "gmail_agent", "action": "gmail:messages.list", "status": "success", "user_id": null, "details": {"status_code": 200, "latency_ms": 275.46}}
