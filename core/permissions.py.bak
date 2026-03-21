@@ -2,16 +2,10 @@
 Agent Registry and Permission Model for ctrlAI.
 This is the core governance layer. Every agent has a registered identity,
 explicit scopes, and governed inter-agent communication rules.
-
-Agent status is persisted to disk so the Streamlit dashboard and Slack bot
-share the same state. Suspending an agent in the dashboard takes effect
-immediately on the next Slack request.
 """
 
-import json
 from dataclasses import dataclass, field
 from enum import Enum
-from pathlib import Path
 from typing import Optional
 
 from core.logger import log_permission_check, log_inter_agent
@@ -87,51 +81,9 @@ INTER_AGENT_PERMISSIONS: dict[str, dict[str, list[str]]] = {
     },
 }
 
-# ============================================================
-# Status Persistence
-# ============================================================
-
-STATUS_FILE = Path(__file__).parent.parent / "config" / "agent_status.json"
-
-
-def _load_status_overrides() -> dict[str, str]:
-    """Load persisted agent status overrides from disk."""
-    if STATUS_FILE.exists():
-        try:
-            return json.loads(STATUS_FILE.read_text())
-        except (json.JSONDecodeError, Exception):
-            pass
-    return {}
-
-
-def _save_status_overrides(overrides: dict[str, str]):
-    """Persist agent status overrides to disk."""
-    STATUS_FILE.parent.mkdir(parents=True, exist_ok=True)
-    STATUS_FILE.write_text(json.dumps(overrides, indent=2))
-
-
-def _apply_status_overrides():
-    """Apply persisted status to the in-memory registry."""
-    overrides = _load_status_overrides()
-    for name, status_str in overrides.items():
-        if name in AGENT_REGISTRY:
-            try:
-                AGENT_REGISTRY[name].status = AgentStatus(status_str)
-            except ValueError:
-                pass
-
-
-# Apply on import so every process starts with correct state
-_apply_status_overrides()
-
-
-# ============================================================
-# Public API
-# ============================================================
 
 def get_agent(name: str) -> Optional[AgentIdentity]:
     """Get an agent's identity from the registry."""
-    _apply_status_overrides()  # Always read latest from disk
     return AGENT_REGISTRY.get(name)
 
 
@@ -187,40 +139,25 @@ def check_inter_agent_permission(requesting_agent: str, target_agent: str, actio
 
 
 def suspend_agent(agent_name: str) -> bool:
-    """Suspend an agent — takes effect immediately on next request in ALL processes."""
-    agent = AGENT_REGISTRY.get(agent_name)
+    """Suspend an agent — takes effect immediately on next request."""
+    agent = get_agent(agent_name)
     if agent is None:
         return False
     agent.status = AgentStatus.SUSPENDED
-
-    # Persist to disk
-    overrides = _load_status_overrides()
-    overrides[agent_name] = AgentStatus.SUSPENDED.value
-    _save_status_overrides(overrides)
-
-    log_permission_check(agent_name, "suspend", True, "agent suspended by admin")
     return True
 
 
 def activate_agent(agent_name: str) -> bool:
-    """Reactivate a suspended agent — takes effect immediately in ALL processes."""
-    agent = AGENT_REGISTRY.get(agent_name)
+    """Reactivate a suspended agent."""
+    agent = get_agent(agent_name)
     if agent is None:
         return False
     agent.status = AgentStatus.ACTIVE
-
-    # Persist to disk
-    overrides = _load_status_overrides()
-    overrides[agent_name] = AgentStatus.ACTIVE.value
-    _save_status_overrides(overrides)
-
-    log_permission_check(agent_name, "activate", True, "agent activated by admin")
     return True
 
 
 def get_all_agents() -> dict[str, AgentIdentity]:
-    """Return the full agent registry with current status."""
-    _apply_status_overrides()
+    """Return the full agent registry."""
     return AGENT_REGISTRY.copy()
 
 

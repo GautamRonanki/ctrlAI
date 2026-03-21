@@ -40,8 +40,10 @@ from core.logger import log_audit
 # State Definition
 # ============================================================
 
+
 class OrchestratorState(TypedDict):
     """State that flows through the entire graph."""
+
     # Input
     user_message: str
     refresh_token: str
@@ -69,6 +71,7 @@ class OrchestratorState(TypedDict):
 # Node: Router
 # ============================================================
 
+
 async def router_node(state: OrchestratorState) -> dict:
     """Use the LLM to determine which agent and action to dispatch."""
     llm = get_llm()
@@ -78,7 +81,6 @@ async def router_node(state: OrchestratorState) -> dict:
         f"- {name}: {a.description} | scopes: {', '.join(a.permitted_scopes)} | "
         f"high-stakes: {', '.join(a.high_stakes_actions)}"
         for name, a in agents.items()
-        if a.status.value == "active"
     )
 
     prompt = f"""You are the ctrlAI Master Orchestrator. Route the user's request to the correct agent.
@@ -86,7 +88,7 @@ async def router_node(state: OrchestratorState) -> dict:
 Available agents:
 {agent_descriptions}
 
-User request: "{state['user_message']}"
+User request: "{state["user_message"]}"
 
 Respond with ONLY valid JSON. No markdown, no explanation, no code fences.
 
@@ -122,26 +124,31 @@ JSON response:"""
             "action": "none",
             "params": {},
             "error": f"Routing failed: {str(e)}",
-            "steps": state.get("steps", []) + [{"node": "router", "status": "error", "error": str(e)}],
+            "steps": state.get("steps", [])
+            + [{"node": "router", "status": "error", "error": str(e)}],
         }
 
     agent = routing.get("agent", "none")
     action = routing.get("action", "none")
     params = routing.get("params", {})
 
-    log_audit("routing", "orchestrator", f"{agent}/{action}", "success", {"params": params})
+    log_audit(
+        "routing", "orchestrator", f"{agent}/{action}", "success", {"params": params}
+    )
 
     return {
         "agent": agent,
         "action": action,
         "params": params,
-        "steps": state.get("steps", []) + [{"node": "router", "agent": agent, "action": action, "params": params}],
+        "steps": state.get("steps", [])
+        + [{"node": "router", "agent": agent, "action": action, "params": params}],
     }
 
 
 # ============================================================
 # Node: Permission Gate
 # ============================================================
+
 
 async def permission_gate_node(state: OrchestratorState) -> dict:
     """Check if the agent is active and has the required permissions."""
@@ -152,24 +159,44 @@ async def permission_gate_node(state: OrchestratorState) -> dict:
         return {
             "error": "no_agent",
             "response": "I'm not sure how to help with that. I can read emails, check your calendar, search Drive, or look at GitHub repos.",
-            "steps": state.get("steps", []) + [{"node": "permission_gate", "status": "no_agent"}],
+            "steps": state.get("steps", [])
+            + [{"node": "permission_gate", "status": "no_agent"}],
         }
 
     # Check agent is active
     if not is_agent_active(agent):
-        log_audit("permission_check", agent, action, "denied", {"reason": "agent not active"})
+        log_audit(
+            "permission_check", agent, action, "denied", {"reason": "agent not active"}
+        )
         return {
             "error": "agent_suspended",
             "response": f"The {agent.replace('_', ' ')} is currently suspended by the administrator.",
-            "steps": state.get("steps", []) + [{"node": "permission_gate", "status": "agent_suspended"}],
+            "steps": state.get("steps", [])
+            + [{"node": "permission_gate", "status": "agent_suspended"}],
         }
 
     # Map actions to required scopes
     scope_map = {
-        "gmail_agent": {"list_emails": "gmail.readonly", "search_emails": "gmail.readonly", "read_email": "gmail.readonly", "send_email": "gmail.send"},
-        "calendar_agent": {"list_events": "calendar.events.readonly", "create_event": "calendar.events"},
-        "drive_agent": {"list_files": "drive.readonly", "search_files": "drive.readonly", "delete_file": "drive.file"},
-        "github_agent": {"list_repos": "repo", "list_issues": "repo", "create_comment": "repo"},
+        "gmail_agent": {
+            "list_emails": "gmail.readonly",
+            "search_emails": "gmail.readonly",
+            "read_email": "gmail.readonly",
+            "send_email": "gmail.send",
+        },
+        "calendar_agent": {
+            "list_events": "calendar.events.readonly",
+            "create_event": "calendar.events",
+        },
+        "drive_agent": {
+            "list_files": "drive.readonly",
+            "search_files": "drive.readonly",
+            "delete_file": "drive.file",
+        },
+        "github_agent": {
+            "list_repos": "repo",
+            "list_issues": "repo",
+            "create_comment": "repo",
+        },
     }
 
     required_scope = scope_map.get(agent, {}).get(action)
@@ -177,17 +204,29 @@ async def permission_gate_node(state: OrchestratorState) -> dict:
         return {
             "error": "permission_denied",
             "response": f"Permission denied: {agent.replace('_', ' ')} does not have the '{required_scope}' scope.",
-            "steps": state.get("steps", []) + [{"node": "permission_gate", "status": "denied", "scope": required_scope}],
+            "steps": state.get("steps", [])
+            + [
+                {"node": "permission_gate", "status": "denied", "scope": required_scope}
+            ],
         }
 
     return {
-        "steps": state.get("steps", []) + [{"node": "permission_gate", "status": "allowed", "agent": agent, "action": action}],
+        "steps": state.get("steps", [])
+        + [
+            {
+                "node": "permission_gate",
+                "status": "allowed",
+                "agent": agent,
+                "action": action,
+            }
+        ],
     }
 
 
 # ============================================================
 # Node: Token Retrieval
 # ============================================================
+
 
 async def token_retrieval_node(state: OrchestratorState) -> dict:
     """Fetch the appropriate OAuth token from Token Vault."""
@@ -198,7 +237,8 @@ async def token_retrieval_node(state: OrchestratorState) -> dict:
         return {
             "error": "no_refresh_token",
             "response": "I can't access services right now. Please log in at the web dashboard first.",
-            "steps": state.get("steps", []) + [{"node": "token_retrieval", "status": "no_refresh_token"}],
+            "steps": state.get("steps", [])
+            + [{"node": "token_retrieval", "status": "no_refresh_token"}],
         }
 
     # Determine which provider
@@ -217,12 +257,14 @@ async def token_retrieval_node(state: OrchestratorState) -> dict:
             return {
                 "error": "token_failed",
                 "response": f"Token Vault exchange failed for {agent.replace('_', ' ')}. Please reconnect your account at the web dashboard.",
-                "steps": state.get("steps", []) + [{"node": "token_retrieval", "status": "failed", "agent": agent}],
+                "steps": state.get("steps", [])
+                + [{"node": "token_retrieval", "status": "failed", "agent": agent}],
             }
 
         return {
             "token": token,
-            "steps": state.get("steps", []) + [{"node": "token_retrieval", "status": "success", "agent": agent}],
+            "steps": state.get("steps", [])
+            + [{"node": "token_retrieval", "status": "success", "agent": agent}],
         }
 
     except Exception as e:
@@ -230,13 +272,15 @@ async def token_retrieval_node(state: OrchestratorState) -> dict:
         return {
             "error": "token_error",
             "response": f"Failed to retrieve token: {str(e)}",
-            "steps": state.get("steps", []) + [{"node": "token_retrieval", "status": "error", "error": str(e)}],
+            "steps": state.get("steps", [])
+            + [{"node": "token_retrieval", "status": "error", "error": str(e)}],
         }
 
 
 # ============================================================
 # Node: CIBA Checkpoint
 # ============================================================
+
 
 async def ciba_checkpoint_node(state: OrchestratorState) -> dict:
     """Check if action is high-stakes. If so, trigger CIBA and wait for approval."""
@@ -246,19 +290,25 @@ async def ciba_checkpoint_node(state: OrchestratorState) -> dict:
     if not is_high_stakes(agent, action):
         return {
             "ciba_status": "skipped",
-            "steps": state.get("steps", []) + [{"node": "ciba_checkpoint", "status": "not_required"}],
+            "steps": state.get("steps", [])
+            + [{"node": "ciba_checkpoint", "status": "not_required"}],
         }
 
     # High-stakes — trigger CIBA
-    ciba_user_id = state.get("ciba_user_id") or os.getenv("EMERGENCY_COORDINATOR_USER_ID", "")
+    ciba_user_id = state.get("ciba_user_id") or os.getenv(
+        "EMERGENCY_COORDINATOR_USER_ID", ""
+    )
     if not ciba_user_id:
         return {
             "error": "no_ciba_user",
             "response": "Cannot request approval — no CIBA user configured.",
-            "steps": state.get("steps", []) + [{"node": "ciba_checkpoint", "status": "no_user"}],
+            "steps": state.get("steps", [])
+            + [{"node": "ciba_checkpoint", "status": "no_user"}],
         }
 
-    binding_message = f"ctrlAI {agent.replace('_', ' ').title()}: {action.replace('_', ' ')}"
+    binding_message = (
+        f"ctrlAI {agent.replace('_', ' ').title()}: {action.replace('_', ' ')}"
+    )
 
     log_audit("ciba", agent, action, "requesting_approval", {"user_id": ciba_user_id})
 
@@ -277,12 +327,14 @@ async def ciba_checkpoint_node(state: OrchestratorState) -> dict:
                 "ciba_status": ciba_status,
                 "error": "ciba_not_approved",
                 "response": f"Action '{action.replace('_', ' ')}' was {ciba_status}. The action was blocked for your safety.",
-                "steps": state.get("steps", []) + [{"node": "ciba_checkpoint", "status": ciba_status}],
+                "steps": state.get("steps", [])
+                + [{"node": "ciba_checkpoint", "status": ciba_status}],
             }
 
         return {
             "ciba_status": "approved",
-            "steps": state.get("steps", []) + [{"node": "ciba_checkpoint", "status": "approved"}],
+            "steps": state.get("steps", [])
+            + [{"node": "ciba_checkpoint", "status": "approved"}],
         }
 
     except Exception as e:
@@ -291,13 +343,15 @@ async def ciba_checkpoint_node(state: OrchestratorState) -> dict:
             "ciba_status": "error",
             "error": "ciba_error",
             "response": f"Approval request failed: {str(e)}",
-            "steps": state.get("steps", []) + [{"node": "ciba_checkpoint", "status": "error", "error": str(e)}],
+            "steps": state.get("steps", [])
+            + [{"node": "ciba_checkpoint", "status": "error", "error": str(e)}],
         }
 
 
 # ============================================================
 # Node: Agent Executor
 # ============================================================
+
 
 async def agent_executor_node(state: OrchestratorState) -> dict:
     """Execute the agent action with the retrieved token."""
@@ -310,25 +364,49 @@ async def agent_executor_node(state: OrchestratorState) -> dict:
         return {
             "error": "no_token",
             "response": "Cannot execute — no token available.",
-            "steps": state.get("steps", []) + [{"node": "agent_executor", "status": "no_token"}],
+            "steps": state.get("steps", [])
+            + [{"node": "agent_executor", "status": "no_token"}],
         }
 
     try:
         result = await _dispatch_agent(agent, action, token, params)
 
         if "error" in result:
-            log_audit("agent_execution", agent, action, "error", {"error": result["error"]})
+            log_audit(
+                "agent_execution", agent, action, "error", {"error": result["error"]}
+            )
             return {
                 "agent_result": result,
                 "error": "agent_error",
                 "response": f"Agent error: {result['error']}",
-                "steps": state.get("steps", []) + [{"node": "agent_executor", "status": "error", "error": result["error"]}],
+                "steps": state.get("steps", [])
+                + [
+                    {
+                        "node": "agent_executor",
+                        "status": "error",
+                        "error": result["error"],
+                    }
+                ],
             }
 
-        log_audit("agent_execution", agent, action, "success", {"result_keys": list(result.keys())})
+        log_audit(
+            "agent_execution",
+            agent,
+            action,
+            "success",
+            {"result_keys": list(result.keys())},
+        )
         return {
             "agent_result": result,
-            "steps": state.get("steps", []) + [{"node": "agent_executor", "status": "success", "agent": agent, "action": action}],
+            "steps": state.get("steps", [])
+            + [
+                {
+                    "node": "agent_executor",
+                    "status": "success",
+                    "agent": agent,
+                    "action": action,
+                }
+            ],
         }
 
     except Exception as e:
@@ -337,7 +415,8 @@ async def agent_executor_node(state: OrchestratorState) -> dict:
         return {
             "error": "execution_error",
             "response": f"Something went wrong: {str(e)}",
-            "steps": state.get("steps", []) + [{"node": "agent_executor", "status": "exception", "error": str(e)}],
+            "steps": state.get("steps", [])
+            + [{"node": "agent_executor", "status": "exception", "error": str(e)}],
         }
 
 
@@ -345,14 +424,24 @@ async def _dispatch_agent(agent: str, action: str, token: str, params: dict) -> 
     """Dispatch to the correct agent function."""
 
     if agent == "gmail_agent":
-        from agents.gmail_agent import list_emails, search_emails, send_email, read_email
+        from agents.gmail_agent import (
+            list_emails,
+            search_emails,
+            send_email,
+            read_email,
+        )
 
         if action == "list_emails":
             return await list_emails(token, max_results=params.get("max_results", 5))
         elif action == "search_emails":
             return await search_emails(token, query=params.get("query", ""))
         elif action == "send_email":
-            return await send_email(token, to=params.get("to", ""), subject=params.get("subject", ""), body=params.get("body", ""))
+            return await send_email(
+                token,
+                to=params.get("to", ""),
+                subject=params.get("subject", ""),
+                body=params.get("body", ""),
+            )
         elif action == "read_email":
             return await read_email(token, message_id=params.get("message_id", ""))
 
@@ -362,7 +451,12 @@ async def _dispatch_agent(agent: str, action: str, token: str, params: dict) -> 
         if action == "list_events":
             return await list_events(token, max_results=params.get("max_results", 5))
         elif action == "create_event":
-            return await create_event(token, summary=params.get("summary", ""), start_time=params.get("start_time", ""), end_time=params.get("end_time", ""))
+            return await create_event(
+                token,
+                summary=params.get("summary", ""),
+                start_time=params.get("start_time", ""),
+                end_time=params.get("end_time", ""),
+            )
 
     elif agent == "drive_agent":
         from agents.drive_agent import list_files, search_files, delete_file
@@ -380,9 +474,17 @@ async def _dispatch_agent(agent: str, action: str, token: str, params: dict) -> 
         if action == "list_repos":
             return await list_repos(token, max_results=params.get("max_results", 10))
         elif action == "list_issues":
-            return await list_issues(token, owner=params.get("owner", ""), repo=params.get("repo", ""))
+            return await list_issues(
+                token, owner=params.get("owner", ""), repo=params.get("repo", "")
+            )
         elif action == "create_comment":
-            return await create_comment(token, owner=params.get("owner", ""), repo=params.get("repo", ""), issue_number=params.get("issue_number", 0), body=params.get("body", ""))
+            return await create_comment(
+                token,
+                owner=params.get("owner", ""),
+                repo=params.get("repo", ""),
+                issue_number=params.get("issue_number", 0),
+                body=params.get("body", ""),
+            )
 
     return {"error": f"Unknown agent/action: {agent}/{action}"}
 
@@ -390,6 +492,7 @@ async def _dispatch_agent(agent: str, action: str, token: str, params: dict) -> 
 # ============================================================
 # Node: Response Formatter
 # ============================================================
+
 
 async def response_formatter_node(state: OrchestratorState) -> dict:
     """Format the agent result into a human-readable Slack message."""
@@ -408,7 +511,8 @@ async def response_formatter_node(state: OrchestratorState) -> dict:
         response = _format_result(agent, action, result)
         return {
             "response": response,
-            "steps": state.get("steps", []) + [{"node": "response_formatter", "status": "success"}],
+            "steps": state.get("steps", [])
+            + [{"node": "response_formatter", "status": "success"}],
         }
     except Exception as e:
         return {"response": f"Got a result but couldn't format it: {str(e)}"}
@@ -421,10 +525,18 @@ def _format_result(agent: str, action: str, result: dict) -> str:
         if action in ("list_emails", "search_emails"):
             emails = result.get("emails", [])
             if not emails:
-                return "No emails found." if action == "list_emails" else f"No emails matching '{result.get('query', '')}' found."
-            lines = [f"Found {result['count']} {'recent ' if action == 'list_emails' else ''}emails:"]
+                return (
+                    "No emails found."
+                    if action == "list_emails"
+                    else f"No emails matching '{result.get('query', '')}' found."
+                )
+            lines = [
+                f"Found {result['count']} {'recent ' if action == 'list_emails' else ''}emails:"
+            ]
             for e in emails:
-                lines.append(f"• *{e['subject']}* from {e['from']} ({e.get('date', '')[:16]})")
+                lines.append(
+                    f"• *{e['subject']}* from {e['from']} ({e.get('date', '')[:16]})"
+                )
             return "\n".join(lines)
         elif action == "send_email":
             return f"✅ Email sent! Message ID: {result.get('message_id', 'unknown')}"
@@ -447,10 +559,18 @@ def _format_result(agent: str, action: str, result: dict) -> str:
         if action in ("list_files", "search_files"):
             files = result.get("files", [])
             if not files:
-                return "No files found." if action == "list_files" else f"No files matching '{result.get('query', '')}' found."
+                return (
+                    "No files found."
+                    if action == "list_files"
+                    else f"No files matching '{result.get('query', '')}' found."
+                )
             lines = [f"Found {result['count']} files:"]
             for f in files:
-                ftype = f.get('type', '').split('.')[-1] if '.' in f.get('type', '') else f.get('type', '')
+                ftype = (
+                    f.get("type", "").split(".")[-1]
+                    if "." in f.get("type", "")
+                    else f.get("type", "")
+                )
                 lines.append(f"• *{f['name']}* ({ftype})")
             return "\n".join(lines)
         elif action == "delete_file":
@@ -470,7 +590,9 @@ def _format_result(agent: str, action: str, result: dict) -> str:
             issues = result.get("issues", [])
             if not issues:
                 return f"No open issues in {result.get('repo', '')}."
-            lines = [f"Found {result['count']} open issues in {result.get('repo', '')}:"]
+            lines = [
+                f"Found {result['count']} open issues in {result.get('repo', '')}:"
+            ]
             for i in issues:
                 lines.append(f"• #{i['number']} *{i['title']}* by {i['author']}")
             return "\n".join(lines)
@@ -484,6 +606,7 @@ def _format_result(agent: str, action: str, result: dict) -> str:
 # ============================================================
 # Graph Construction
 # ============================================================
+
 
 def _should_continue(state: OrchestratorState) -> str:
     """Determine next node based on state."""
