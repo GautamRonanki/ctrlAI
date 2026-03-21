@@ -137,20 +137,53 @@ async def callback(request: Request):
 
 @app.get("/connect/google")
 async def connect_google(request: Request):
-    access_token = request.session.get("access_token")
-    if not access_token:
-        raise HTTPException(status_code=401, detail="Not logged in.")
+    refresh_token = request.session.get("refresh_token")
+    if not refresh_token:
+        raise HTTPException(
+            status_code=401, detail="No refresh token. Login again with consent."
+        )
 
+    # Step 1: Exchange refresh token for My Account API access token
+    async with httpx.AsyncClient() as client:
+        token_resp = await client.post(
+            f"https://{AUTH0_DOMAIN}/oauth/token",
+            json={
+                "grant_type": "refresh_token",
+                "client_id": AUTH0_CLIENT_ID,
+                "client_secret": AUTH0_CLIENT_SECRET,
+                "refresh_token": refresh_token,
+                "audience": f"https://{AUTH0_DOMAIN}/me/",
+                "scope": "openid profile offline_access create:me:connected_accounts read:me:connected_accounts delete:me:connected_accounts",
+            },
+        )
+
+    if token_resp.status_code != 200:
+        logger.error(
+            f"MRRT exchange failed: {token_resp.status_code} {token_resp.text}"
+        )
+        return JSONResponse(
+            {
+                "error": "Failed to get My Account API token",
+                "details": token_resp.json(),
+            },
+            status_code=400,
+        )
+
+    me_token = token_resp.json().get("access_token")
+
+    # Step 2: Initiate Connected Accounts flow with the My Account API token
     async with httpx.AsyncClient() as client:
         response = await client.post(
-            f"https://{AUTH0_DOMAIN}/me/v1/connected-accounts",
+            f"https://{AUTH0_DOMAIN}/me/v1/connected-accounts/connect",
             headers={
-                "Authorization": f"Bearer {access_token}",
+                "Authorization": f"Bearer {me_token}",
                 "Content-Type": "application/json",
             },
             json={
                 "connection": "google-oauth2",
                 "scopes": [
+                    "openid",
+                    "profile",
                     "https://www.googleapis.com/auth/gmail.readonly",
                     "https://www.googleapis.com/auth/gmail.send",
                     "https://www.googleapis.com/auth/calendar.readonly",
@@ -178,11 +211,16 @@ async def connect_google(request: Request):
     data = response.json()
     connect_uri = data.get("connect_uri")
     auth_session = data.get("auth_session")
+    connect_params = data.get("connect_params", {})
+    ticket = connect_params.get("ticket")
 
-    if connect_uri:
+    if connect_uri and ticket:
         request.session["connect_auth_session"] = auth_session
-        return RedirectResponse(connect_uri)
-    return JSONResponse({"error": "No connect_uri", "data": data}, status_code=400)
+        request.session["me_access_token"] = me_token
+        return RedirectResponse(f"{connect_uri}?ticket={ticket}")
+    return JSONResponse(
+        {"error": "No connect_uri or ticket", "data": data}, status_code=400
+    )
 
 
 @app.get("/connect/google/callback")
@@ -206,7 +244,7 @@ async def connect_google_callback(request: Request):
 @app.get("/connect/google/complete")
 async def connect_google_complete(request: Request, connect_code: str):
     auth_session = request.session.get("connect_auth_session")
-    access_token = request.session.get("access_token")
+    access_token = request.session.get("me_access_token")
     if not auth_session or not access_token:
         raise HTTPException(status_code=401, detail="Session expired. Login again.")
 
@@ -224,7 +262,7 @@ async def connect_google_complete(request: Request, connect_code: str):
             },
         )
 
-    if response.status_code == 200:
+    if response.status_code in (200, 201):
         request.session["google_connected"] = True
         logger.info("Google Connected Account linked!")
         return RedirectResponse("/")
