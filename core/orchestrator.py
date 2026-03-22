@@ -23,7 +23,7 @@ from dataclasses import dataclass
 from langgraph.graph import StateGraph, END
 from loguru import logger
 
-from core.llm import get_llm
+from core.llm import get_llm, call_llm
 from core.permissions import (
     get_all_agents,
     is_agent_active,
@@ -111,7 +111,9 @@ If the request doesn't match any agent, respond: {{"agent": "none", "action": "n
 JSON response:"""
 
     try:
-        response = await llm.ainvoke([{"role": "user", "content": prompt}])
+        response = await call_llm(
+            llm, [{"role": "user", "content": prompt}], label="orchestrator_router"
+        )
         content = response.content.strip()
         # Strip markdown code fences if present
         if content.startswith("```"):

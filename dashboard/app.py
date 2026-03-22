@@ -669,9 +669,31 @@ st.divider()
 # ============================================================
 st.header("💰 LLM Usage Stats")
 
-from core.llm import get_usage_stats
+USAGE_STATS_PATH = Path(__file__).parent.parent / "logs" / "llm_usage.json"
 
-stats = get_usage_stats()
+
+def _read_llm_stats():
+    try:
+        if USAGE_STATS_PATH.exists():
+            data = json.loads(USAGE_STATS_PATH.read_text())
+            cost = round(
+                (data.get("total_prompt_tokens", 0) * 0.15 / 1_000_000)
+                + (data.get("total_completion_tokens", 0) * 0.6 / 1_000_000),
+                4,
+            )
+            data["estimated_cost_usd"] = cost
+            return data
+    except (json.JSONDecodeError, OSError):
+        pass
+    return {
+        "total_calls": 0,
+        "total_prompt_tokens": 0,
+        "total_completion_tokens": 0,
+        "estimated_cost_usd": 0,
+    }
+
+
+stats = _read_llm_stats()
 c1, c2, c3, c4 = st.columns(4)
 with c1:
     st.metric("Total LLM Calls", stats["total_calls"])
