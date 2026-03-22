@@ -497,7 +497,7 @@ async def _dispatch_agent(agent: str, action: str, token: str, params: dict) -> 
 
 
 async def response_formatter_node(state: OrchestratorState) -> dict:
-    """Format the agent result into a human-readable Slack message."""
+    """Use LLM to generate an intelligent, conversational response from agent results."""
     # If there's already an error response, pass it through
     if state.get("error") and state.get("response"):
         return {}
@@ -508,16 +508,78 @@ async def response_formatter_node(state: OrchestratorState) -> dict:
 
     agent = state["agent"]
     action = state["action"]
+    user_message = state.get("user_message", "")
 
+    # For simple confirmations (send_email, create_event, delete_file, create_comment),
+    # use the hardcoded formatter — no need to burn tokens
+    simple_actions = {"send_email", "create_event", "delete_file", "create_comment"}
+    if action in simple_actions:
+        try:
+            response = _format_result(agent, action, result)
+            return {
+                "response": response,
+                "steps": state.get("steps", [])
+                + [
+                    {
+                        "node": "response_formatter",
+                        "status": "success",
+                        "method": "direct",
+                    }
+                ],
+            }
+        except Exception:
+            pass  # Fall through to LLM formatting
+
+    # For read/list/search actions, use LLM to give an intelligent answer
     try:
-        response = _format_result(agent, action, result)
+        llm = get_llm()
+
+        # Truncate result to avoid blowing up the context
+        result_str = json.dumps(result, indent=2, default=str)
+        if len(result_str) > 8000:
+            result_str = result_str[:8000] + "\n... (truncated)"
+
+        format_prompt = f"""You are ctrlAI, an intelligent AI assistant that helps users interact with their services (Gmail, Calendar, Drive, GitHub).
+
+The user asked: "{user_message}"
+
+The {agent.replace("_", " ")} retrieved this data:
+{result_str}
+
+Your job:
+1. Answer the user's question directly and conversationally based on the data above
+2. Highlight the most relevant information — don't just list everything
+3. If there are details worth noting (attachments, conflicts, deadlines), mention them
+4. At the end, suggest 1-2 natural follow-up actions the user might want (e.g., "Want me to save the attachment to Drive?" or "Should I create a calendar event for this?")
+
+Keep it concise. Use Slack formatting: *single asterisks* for bold (NOT **double**), • for lists. Never use markdown formatting like **bold** or ### headers — only Slack mrkdwn. Do not make up information not present in the data."""
+
+        response = await call_llm(
+            llm,
+            [{"role": "user", "content": format_prompt}],
+            label="response_formatter",
+        )
+
+        return {
+            "response": response.content.strip(),
+            "steps": state.get("steps", [])
+            + [{"node": "response_formatter", "status": "success", "method": "llm"}],
+        }
+
+    except Exception as e:
+        logger.error(
+            f"LLM response formatting failed: {e}, falling back to direct format"
+        )
+        # Fallback to hardcoded formatter
+        try:
+            response = _format_result(agent, action, result)
+        except Exception:
+            response = json.dumps(result, indent=2)
         return {
             "response": response,
             "steps": state.get("steps", [])
-            + [{"node": "response_formatter", "status": "success"}],
+            + [{"node": "response_formatter", "status": "fallback", "error": str(e)}],
         }
-    except Exception as e:
-        return {"response": f"Got a result but couldn't format it: {str(e)}"}
 
 
 def _format_result(agent: str, action: str, result: dict) -> str:
