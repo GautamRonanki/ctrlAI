@@ -164,7 +164,16 @@ entries = load_audit_log()
 s1, s2, s3, s4, s5 = st.columns(5)
 with s1:
     active_count = 0
-    from core.permissions import get_all_agents, AgentStatus
+    from core.permissions import (
+        get_all_agents,
+        AgentStatus,
+        get_available_scopes,
+        get_available_high_stakes,
+        update_scopes,
+        update_high_stakes,
+        suspend_agent,
+        activate_agent,
+    )
 
     for a in get_all_agents().values():
         if a.status == AgentStatus.ACTIVE:
@@ -192,12 +201,124 @@ with s5:
 st.divider()
 
 # ============================================================
-# Agent Registry
+# Agent Registry (with inline permission management)
 # ============================================================
 st.header("🤖 Agent Registry")
 
 agents = get_all_agents()
 
+# Plain language scope descriptions
+SCOPE_LABELS = {
+    "gmail.readonly": "Can read your emails",
+    "gmail.send": "Can send emails on your behalf",
+    "drive.readonly": "Can view your Drive files",
+    "drive.file": "Can create and manage files in Drive",
+    "calendar.events.readonly": "Can view your calendar events",
+    "calendar.events": "Can create and modify calendar events",
+    "repo": "Can access your GitHub repositories",
+    "read:user": "Can read your GitHub profile",
+}
+
+ACTION_LABELS = {
+    "send_email": "Sending an email",
+    "list_emails": "Listing emails",
+    "search_emails": "Searching emails",
+    "read_email": "Reading an email",
+    "delete_file": "Deleting a file",
+    "list_files": "Listing files",
+    "search_files": "Searching files",
+    "create_event": "Creating a calendar event",
+    "list_events": "Listing calendar events",
+    "create_comment": "Posting a GitHub comment",
+    "list_repos": "Listing repositories",
+    "list_issues": "Listing issues",
+}
+
+PROVIDER_LABELS = {
+    "google": "Google OAuth",
+    "github": "GitHub OAuth",
+}
+
+
+# Dialog for managing agent settings
+@st.dialog("Agent Settings", width="large")
+def show_permission_dialog(agent_name: str):
+    agent = get_all_agents()[agent_name]
+    is_active = agent.status == AgentStatus.ACTIVE
+    status_emoji = "🟢" if is_active else "🔴"
+    status_label = "Active" if is_active else "Suspended"
+
+    st.subheader(f"{status_emoji} {humanize(agent_name)}")
+    st.caption(agent.description)
+    st.divider()
+
+    # Status toggle
+    st.markdown("**Agent Status**")
+    if is_active:
+        if st.button(
+            "⏸️ Suspend Agent", key=f"dlg_suspend_{agent_name}", use_container_width=True
+        ):
+            suspend_agent(agent_name)
+            st.rerun()
+    else:
+        if st.button(
+            "▶️ Activate Agent",
+            key=f"dlg_activate_{agent_name}",
+            use_container_width=True,
+        ):
+            activate_agent(agent_name)
+            st.rerun()
+
+    st.divider()
+
+    col_scopes, col_highstakes = st.columns(2)
+
+    with col_scopes:
+        st.markdown("**Permissions**")
+        st.caption("What this agent is allowed to do.")
+        available = get_available_scopes(agent_name)
+        current_scopes = list(agent.permitted_scopes)
+
+        new_scopes = []
+        for scope in available:
+            label = SCOPE_LABELS.get(scope, scope)
+            checked = st.checkbox(
+                label,
+                value=scope in current_scopes,
+                key=f"dlg_scope_{agent_name}_{scope}",
+            )
+            if checked:
+                new_scopes.append(scope)
+
+    with col_highstakes:
+        st.markdown("**Requires Approval (CIBA)**")
+        st.caption("Actions that need your confirmation before executing.")
+        available_hs = get_available_high_stakes(agent_name)
+        current_hs = list(agent.high_stakes_actions)
+
+        new_hs = []
+        for action in available_hs:
+            label = ACTION_LABELS.get(action, action)
+            checked = st.checkbox(
+                label,
+                value=action in current_hs,
+                key=f"dlg_hs_{agent_name}_{action}",
+            )
+            if checked:
+                new_hs.append(action)
+
+    st.divider()
+    if st.button(
+        "💾 Save Changes", key=f"dlg_save_{agent_name}", use_container_width=True
+    ):
+        if new_scopes != current_scopes:
+            update_scopes(agent_name, new_scopes)
+        if new_hs != current_hs:
+            update_high_stakes(agent_name, new_hs)
+        st.rerun()
+
+
+# Render agent cards
 cols = st.columns(4)
 for i, (name, agent) in enumerate(agents.items()):
     with cols[i % 4]:
@@ -208,11 +329,11 @@ for i, (name, agent) in enumerate(agents.items()):
         status_emoji = "🟢" if is_active else "🔴"
 
         scope_badges = "".join(
-            f'<span class="scope-badge">{humanize_lower(s)}</span>'
+            f'<span class="scope-badge">{SCOPE_LABELS.get(s, s)}</span>'
             for s in agent.permitted_scopes
         )
         highstakes_badges = "".join(
-            f'<span class="highstakes-badge">{humanize_lower(s)}</span>'
+            f'<span class="highstakes-badge">{ACTION_LABELS.get(s, s)}</span>'
             for s in agent.high_stakes_actions
         )
 
@@ -221,93 +342,19 @@ for i, (name, agent) in enumerate(agents.items()):
         <div class="{card_class}">
             <div class="agent-name">{status_emoji} {humanize(name)}</div>
             <div class="agent-detail">{agent.description}</div>
-            <div class="agent-detail" style="margin-top:8px;"><b>Provider:</b> {humanize(agent.oauth_provider)}</div>
-            <div class="agent-detail"><b>Scopes:</b> {scope_badges}</div>
-            <div class="agent-detail"><b>High-Stakes:</b> {highstakes_badges}</div>
+            <div class="agent-detail" style="margin-top:8px;"><b>Provider:</b> {PROVIDER_LABELS.get(agent.oauth_provider, agent.oauth_provider)}</div>
+            <div class="agent-detail"><b>Permissions:</b> {scope_badges}</div>
+            <div class="agent-detail"><b>Requires Approval:</b> {highstakes_badges if highstakes_badges else '<span style="color:#888;">None</span>'}</div>
             <div class="agent-detail" style="margin-top:6px;"><b>Status:</b> <span class="{status_class}">{status_label}</span></div>
         </div>
         """,
             unsafe_allow_html=True,
         )
 
-        if is_active:
-            if st.button(f"⏸️ Suspend", key=f"suspend_{name}"):
-                from core.permissions import suspend_agent
-
-                suspend_agent(name)
-                st.rerun()
-        else:
-            if st.button(f"▶️ Activate", key=f"activate_{name}"):
-                from core.permissions import activate_agent
-
-                activate_agent(name)
-                st.rerun()
+        if st.button("⚙️ Manage", key=f"settings_{name}", use_container_width=True):
+            show_permission_dialog(name)
 
 st.divider()
-
-# ============================================================
-# Agent Permission Management
-# ============================================================
-st.header("⚙️ Agent Permission Management")
-st.caption(
-    "Toggle scopes and high-stakes actions per agent. Changes take effect immediately on the next request."
-)
-
-from core.permissions import (
-    get_available_scopes,
-    get_available_high_stakes,
-    update_scopes,
-    update_high_stakes,
-)
-
-mgmt_tabs = st.tabs([humanize(name) for name in agents.keys()])
-
-for tab, (name, agent) in zip(mgmt_tabs, agents.items()):
-    with tab:
-        col_scopes, col_highstakes = st.columns(2)
-
-        with col_scopes:
-            st.markdown("**Permitted Scopes**")
-            st.caption("Toggle which scopes this agent is allowed to use.")
-            available = get_available_scopes(name)
-            current_scopes = list(agent.permitted_scopes)
-
-            new_scopes = []
-            for scope in available:
-                checked = st.checkbox(
-                    humanize_lower(scope),
-                    value=scope in current_scopes,
-                    key=f"scope_{name}_{scope}",
-                )
-                if checked:
-                    new_scopes.append(scope)
-
-            if new_scopes != current_scopes:
-                update_scopes(name, new_scopes)
-                st.rerun()
-
-        with col_highstakes:
-            st.markdown("**High-Stakes Actions (require CIBA approval)**")
-            st.caption("Toggle which actions require human approval before executing.")
-            available_hs = get_available_high_stakes(name)
-            current_hs = list(agent.high_stakes_actions)
-
-            new_hs = []
-            for action in available_hs:
-                checked = st.checkbox(
-                    humanize_lower(action),
-                    value=action in current_hs,
-                    key=f"hs_{name}_{action}",
-                )
-                if checked:
-                    new_hs.append(action)
-
-            if new_hs != current_hs:
-                update_high_stakes(name, new_hs)
-                st.rerun()
-
-st.divider()
-
 # ============================================================
 # Inter-Agent Permission Matrix
 # ============================================================
