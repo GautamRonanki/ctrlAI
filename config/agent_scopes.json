@@ -1,6 +1,0 @@
-{
-  "gmail_agent": [
-    "gmail.readonly",
-    "gmail.send"
-  ]
-}
