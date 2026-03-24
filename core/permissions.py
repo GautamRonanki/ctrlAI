@@ -14,6 +14,10 @@ from enum import Enum
 from pathlib import Path
 from typing import Optional
 
+from dotenv import load_dotenv
+
+load_dotenv()
+
 from core.logger import log_permission_check, log_inter_agent, log_audit
 
 
@@ -202,6 +206,70 @@ def _apply_all_overrides():
 # Apply on import
 _apply_all_overrides()
 
+# ============================================================
+# Rate Limiting — Active Protection
+# ============================================================
+
+import time as _time
+
+# Max requests per agent per window
+RATE_LIMIT_MAX = 20
+RATE_LIMIT_WINDOW_SECONDS = 60
+
+# In-memory request tracker: {agent_name: [timestamp, timestamp, ...]}
+_agent_request_log: dict[str, list[float]] = {}
+# Track which agents have already sent a rate limit alert in the current window
+_rate_limit_alerted: dict[str, float] = {}
+
+RATE_LIMIT_FILE = CONFIG_DIR / "rate_limits.json"
+
+
+def _check_rate_limit(agent_name: str) -> bool:
+    """
+    Check if an agent has exceeded its rate limit.
+    Returns True if the request is ALLOWED, False if RATE LIMITED.
+    Automatically cleans up old entries outside the window.
+    """
+    now = _time.time()
+    window_start = now - RATE_LIMIT_WINDOW_SECONDS
+
+    # Get or create the request log for this agent
+    if agent_name not in _agent_request_log:
+        _agent_request_log[agent_name] = []
+
+    # Clean up old entries outside the window
+    _agent_request_log[agent_name] = [
+        t for t in _agent_request_log[agent_name] if t > window_start
+    ]
+
+    # Check if limit exceeded
+    if len(_agent_request_log[agent_name]) >= RATE_LIMIT_MAX:
+        return False
+
+    # Record this request
+    _agent_request_log[agent_name].append(now)
+    return True
+
+
+def get_rate_limit_status(agent_name: str) -> dict:
+    """Get current rate limit status for an agent."""
+    now = _time.time()
+    window_start = now - RATE_LIMIT_WINDOW_SECONDS
+
+    if agent_name not in _agent_request_log:
+        return {
+            "requests_in_window": 0,
+            "limit": RATE_LIMIT_MAX,
+            "remaining": RATE_LIMIT_MAX,
+        }
+
+    recent = [t for t in _agent_request_log[agent_name] if t > window_start]
+    return {
+        "requests_in_window": len(recent),
+        "limit": RATE_LIMIT_MAX,
+        "remaining": max(0, RATE_LIMIT_MAX - len(recent)),
+    }
+
 
 # ============================================================
 # Public API — Status
@@ -348,8 +416,12 @@ def update_high_stakes(agent_name: str, new_actions: list[str]) -> bool:
 # ============================================================
 
 
-def check_scope_permission(agent_name: str, requested_scope: str) -> bool:
-    """Check if an agent has permission for a specific scope."""
+def check_scope_permission(
+    agent_name: str, requested_scope: str, _system_bypass_rate_limit: bool = False
+) -> bool:
+    """Check if an agent has permission for a specific scope.
+    Enforces: agent exists → agent active → rate limit → scope check.
+    """
     agent = get_agent(agent_name)
     if agent is None:
         log_permission_check(agent_name, requested_scope, False, "agent not found")
@@ -358,6 +430,27 @@ def check_scope_permission(agent_name: str, requested_scope: str) -> bool:
     if agent.status != AgentStatus.ACTIVE:
         log_permission_check(
             agent_name, requested_scope, False, f"agent status: {agent.status}"
+        )
+        return False
+
+    # Rate limit check — before scope check (system alerts can bypass)
+    if not _system_bypass_rate_limit and not _check_rate_limit(agent_name):
+        log_permission_check(
+            agent_name,
+            requested_scope,
+            False,
+            f"rate limit exceeded: {RATE_LIMIT_MAX} requests per {RATE_LIMIT_WINDOW_SECONDS}s",
+        )
+        log_audit(
+            "security_alert",
+            agent_name,
+            "rate_limit_exceeded",
+            "denied",
+            {
+                "scope": requested_scope,
+                "limit": RATE_LIMIT_MAX,
+                "window_seconds": RATE_LIMIT_WINDOW_SECONDS,
+            },
         )
         return False
 
@@ -404,3 +497,124 @@ def get_all_agents() -> dict[str, AgentIdentity]:
 def get_permission_matrix() -> dict:
     """Return the full inter-agent permission matrix."""
     return INTER_AGENT_PERMISSIONS.copy()
+
+
+async def send_rate_limit_alert(agent_name: str, limit: int, window: int):
+    """Send an email alert when an agent exceeds its rate limit.
+    Uses the inter-agent permission matrix — routes through Gmail Agent."""
+    import os
+
+    # Check inter-agent permission (security_report_agent → gmail_agent)
+    if not check_inter_agent_permission(
+        "security_report_agent", "gmail_agent", "send_alert_email"
+    ):
+        log_audit(
+            "security_alert",
+            agent_name,
+            "rate_limit_alert_blocked",
+            "denied",
+            {"reason": "inter-agent permission denied for email alert"},
+        )
+        return
+
+    admin_email = os.getenv("ADMIN_ALERT_EMAIL", "")
+    if not admin_email:
+        log_audit(
+            "security_alert",
+            agent_name,
+            "rate_limit_alert_failed",
+            "error",
+            {"reason": "no ADMIN_ALERT_EMAIL configured"},
+        )
+        return
+
+    # Get Gmail token
+    refresh_token = None
+    token_store_path = CONFIG_DIR / "token_store.json"
+    if not token_store_path.exists():
+        log_audit(
+            "security_alert",
+            agent_name,
+            "rate_limit_alert_failed",
+            "error",
+            {"reason": "token_store.json not found"},
+        )
+        return
+
+    try:
+        token_data = json.loads(token_store_path.read_text())
+        refresh_token = token_data.get("refresh_token", "")
+    except (json.JSONDecodeError, Exception):
+        log_audit(
+            "security_alert",
+            agent_name,
+            "rate_limit_alert_failed",
+            "error",
+            {"reason": "failed to read token_store.json"},
+        )
+        return
+
+    if not refresh_token:
+        log_audit(
+            "security_alert",
+            agent_name,
+            "rate_limit_alert_failed",
+            "error",
+            {"reason": "no refresh token"},
+        )
+        return
+
+    from core.token_service import get_google_token
+
+    gmail_token = await get_google_token(refresh_token)
+    if not gmail_token:
+        log_audit(
+            "security_alert",
+            agent_name,
+            "rate_limit_alert_failed",
+            "error",
+            {"reason": "Token Vault exchange failed"},
+        )
+        return
+
+    import httpx
+    import base64
+    from email.mime.text import MIMEText
+
+    alert_body = (
+        f"⚠️ ctrlAI Rate Limit Alert\n\n"
+        f"Agent: {agent_name}\n"
+        f"Exceeded: {limit} requests in {window} seconds\n"
+        f"Action: Requests from this agent are being throttled.\n\n"
+        f"Review the audit log in the ctrlAI dashboard for details.\n"
+        f"If this is unexpected, consider suspending the agent immediately."
+    )
+
+    msg = MIMEText(alert_body)
+    msg["to"] = admin_email
+    msg["subject"] = f"⚠️ ctrlAI Rate Limit Alert — {agent_name}"
+    raw = base64.urlsafe_b64encode(msg.as_bytes()).decode()
+
+    async with httpx.AsyncClient() as client:
+        response = await client.post(
+            "https://gmail.googleapis.com/gmail/v1/users/me/messages/send",
+            headers={"Authorization": f"Bearer {gmail_token}"},
+            json={"raw": raw},
+        )
+
+    if response.status_code == 200:
+        log_audit(
+            "security_alert",
+            agent_name,
+            "rate_limit_alert_sent",
+            "success",
+            {"admin_email": admin_email, "limit": limit, "window": window},
+        )
+    else:
+        log_audit(
+            "security_alert",
+            agent_name,
+            "rate_limit_alert_failed",
+            "error",
+            {"reason": f"Gmail API returned {response.status_code}"},
+        )
