@@ -217,6 +217,8 @@ SCOPE_LABELS = {
     "calendar.events": "Can create and modify calendar events",
     "repo": "Can access your GitHub repositories",
     "read:user": "Can read your GitHub profile",
+    "audit.read": "Can read the audit trail",
+    "report.generate": "Can generate security reports",
 }
 
 ACTION_LABELS = {
@@ -232,11 +234,14 @@ ACTION_LABELS = {
     "create_comment": "Posting a GitHub comment",
     "list_repos": "Listing repositories",
     "list_issues": "Listing issues",
+    "send_alert_email": "Sending a security alert email",
+    "generate_report": "Generating a security report",
 }
 
 PROVIDER_LABELS = {
     "google": "Google OAuth",
     "github": "GitHub OAuth",
+    "internal": "Internal (No OAuth)",
 }
 
 
@@ -513,6 +518,109 @@ if orchestrator_entries:
             f"{status_icon} **{agent_display}** — {action_display} — "
             f"{steps_count} steps — {entry['timestamp'][:19]}"
         )
+
+st.divider()
+
+# ============================================================
+# Autonomous Security Report Agent
+# ============================================================
+st.header("🔒 Security Report Agent")
+st.caption(
+    "Autonomous agent — monitors the audit trail and alerts on security violations. Not triggered by employees."
+)
+
+from agents.security_report_agent import generate_security_report, send_alert_email
+
+report_col1, report_col2, report_col3 = st.columns([2, 2, 6])
+
+with report_col1:
+    run_report = st.button(
+        "▶️ Run Now", key="run_security_report", use_container_width=True
+    )
+with report_col2:
+    run_and_alert = st.button(
+        "▶️ Run & Alert",
+        key="run_and_alert",
+        use_container_width=True,
+        help="Generate report and send email alert if critical issues found",
+    )
+
+if run_report or run_and_alert:
+    with st.spinner("Security Report Agent running through permission pipeline..."):
+        report_result = run_async(generate_security_report())
+
+    if report_result["status"] == "blocked":
+        st.error(f"🚫 Blocked: {report_result['reason']}")
+    elif report_result["status"] == "success":
+        st.success("✅ Report generated successfully")
+        st.markdown(report_result["report"])
+
+        # Show analysis metrics
+        if (
+            report_result.get("analysis")
+            and report_result["analysis"].get("total_events", 0) > 0
+        ):
+            analysis = report_result["analysis"]
+            a1, a2, a3, a4, a5 = st.columns(5)
+            with a1:
+                st.metric("Total Events", analysis["total_events"])
+            with a2:
+                st.metric("Denials", analysis["denied_count"])
+            with a3:
+                st.metric("CIBA Events", analysis["ciba_count"])
+            with a4:
+                st.metric(
+                    "Inter-Agent Violations", analysis["inter_agent_denied_count"]
+                )
+            with a5:
+                st.metric("Errors", analysis["error_count"])
+
+        # Send alert email if critical and user clicked Run & Alert
+        if run_and_alert and report_result.get("has_critical"):
+            st.warning(
+                "⚠️ Critical issues detected — sending alert email via Gmail Agent..."
+            )
+            refresh_token = None
+            token_store_path = (
+                Path(__file__).parent.parent / "config" / "token_store.json"
+            )
+            if token_store_path.exists():
+                try:
+                    token_data = json.loads(token_store_path.read_text())
+                    refresh_token = token_data.get("refresh_token", "")
+                except (json.JSONDecodeError, Exception):
+                    pass
+
+            if refresh_token:
+                from core.token_service import get_google_token
+
+                gmail_token = run_async(get_google_token(refresh_token))
+                if gmail_token:
+                    email_result = run_async(
+                        send_alert_email(report_result["report"], gmail_token)
+                    )
+                    if email_result.get("status") == "blocked":
+                        st.error(
+                            f"🚫 Inter-agent request blocked: {email_result['reason']}"
+                        )
+                    elif "error" in email_result:
+                        st.error(
+                            f"❌ Failed to send alert: {email_result.get('error', 'Unknown error')}"
+                        )
+                    else:
+                        st.success(
+                            "✅ Alert email sent to admin via Gmail Agent (inter-agent communication)"
+                        )
+                else:
+                    st.error("❌ Could not retrieve Gmail token from Token Vault")
+            else:
+                st.error(
+                    "❌ No refresh token available. Log in via the web dashboard first."
+                )
+        elif run_and_alert and not report_result.get("has_critical"):
+            st.info("✅ No critical issues found — no alert email needed.")
+    else:
+        st.error(f"❌ Error: {report_result.get('reason', 'Unknown error')}")
 
 st.divider()
 

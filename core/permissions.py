@@ -66,6 +66,13 @@ DEFAULT_AGENT_REGISTRY: dict[str, dict] = {
         "permitted_scopes": ["repo", "read:user"],
         "high_stakes_actions": ["create_comment"],
     },
+    "security_report_agent": {
+        "name": "security_report_agent",
+        "description": "Autonomous agent that monitors the audit trail and alerts on security violations",
+        "oauth_provider": "internal",
+        "permitted_scopes": ["audit.read", "report.generate"],
+        "high_stakes_actions": [],
+    },
 }
 
 # All possible scopes per provider that can be toggled on/off
@@ -74,6 +81,7 @@ AVAILABLE_SCOPES = {
     "drive_agent": ["drive.readonly", "drive.file"],
     "calendar_agent": ["calendar.events.readonly", "calendar.events"],
     "github_agent": ["repo", "read:user"],
+    "security_report_agent": ["audit.read", "report.generate"],
 }
 
 # All possible high-stakes actions per agent that can be toggled
@@ -82,6 +90,7 @@ AVAILABLE_HIGH_STAKES = {
     "drive_agent": ["delete_file", "list_files", "search_files"],
     "calendar_agent": ["create_event", "list_events"],
     "github_agent": ["create_comment", "list_repos", "list_issues"],
+    "security_report_agent": ["send_alert_email", "generate_report"],
 }
 
 # ============================================================
@@ -122,6 +131,9 @@ INTER_AGENT_PERMISSIONS: dict[str, dict[str, list[str]]] = {
     },
     "github_agent": {
         "gmail_agent": ["read_email_context"],
+    },
+    "security_report_agent": {
+        "gmail_agent": ["send_alert_email"],
     },
 }
 
