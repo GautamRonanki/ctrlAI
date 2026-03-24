@@ -73,6 +73,18 @@ DEFAULT_AGENT_REGISTRY: dict[str, dict] = {
         "permitted_scopes": ["audit.read", "report.generate"],
         "high_stakes_actions": [],
     },
+    "stale_issue_monitor": {
+        "name": "stale_issue_monitor",
+        "description": "Autonomous agent that monitors GitHub repos for stale issues and alerts the team",
+        "oauth_provider": "github",
+        "permitted_scopes": [
+            "repo:read",
+            "issues:read",
+            "issues:write",
+            "issues:label",
+        ],
+        "high_stakes_actions": ["post_stale_comment", "add_stale_label"],
+    },
 }
 
 # All possible scopes per provider that can be toggled on/off
@@ -82,6 +94,7 @@ AVAILABLE_SCOPES = {
     "calendar_agent": ["calendar.events.readonly", "calendar.events"],
     "github_agent": ["repo", "read:user"],
     "security_report_agent": ["audit.read", "report.generate"],
+    "stale_issue_monitor": ["repo:read", "issues:read", "issues:write", "issues:label"],
 }
 
 # All possible high-stakes actions per agent that can be toggled
@@ -91,6 +104,7 @@ AVAILABLE_HIGH_STAKES = {
     "calendar_agent": ["create_event", "list_events"],
     "github_agent": ["create_comment", "list_repos", "list_issues"],
     "security_report_agent": ["send_alert_email", "generate_report"],
+    "stale_issue_monitor": ["post_stale_comment", "add_stale_label"],
 }
 
 # ============================================================

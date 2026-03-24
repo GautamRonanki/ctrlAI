@@ -178,7 +178,7 @@ with s1:
     for a in get_all_agents().values():
         if a.status == AgentStatus.ACTIVE:
             active_count += 1
-    st.metric("Active Agents", f"{active_count} / 4")
+    st.metric("Active Agents", f"{active_count} / {len(get_all_agents())}")
 with s2:
     st.metric("Total Events", len(entries))
 with s3:
@@ -219,6 +219,10 @@ SCOPE_LABELS = {
     "read:user": "Can read your GitHub profile",
     "audit.read": "Can read the audit trail",
     "report.generate": "Can generate security reports",
+    "repo:read": "Can read repository information",
+    "issues:read": "Can read issues",
+    "issues:write": "Can post comments on issues",
+    "issues:label": "Can add labels to issues",
 }
 
 ACTION_LABELS = {
@@ -236,6 +240,8 @@ ACTION_LABELS = {
     "list_issues": "Listing issues",
     "send_alert_email": "Sending a security alert email",
     "generate_report": "Generating a security report",
+    "post_stale_comment": "Posting a comment on a stale issue",
+    "add_stale_label": "Adding a stale label to an issue",
 }
 
 PROVIDER_LABELS = {
@@ -324,9 +330,9 @@ def show_permission_dialog(agent_name: str):
 
 
 # Render agent cards
-cols = st.columns(4)
+cols = st.columns(3)
 for i, (name, agent) in enumerate(agents.items()):
-    with cols[i % 4]:
+    with cols[i % 3]:
         is_active = agent.status == AgentStatus.ACTIVE
         card_class = "agent-card" if is_active else "agent-card-suspended"
         status_class = "status-active" if is_active else "status-suspended"
@@ -621,6 +627,140 @@ if run_report or run_and_alert:
             st.info("✅ No critical issues found — no alert email needed.")
     else:
         st.error(f"❌ Error: {report_result.get('reason', 'Unknown error')}")
+
+st.divider()
+
+# ============================================================
+# Stale Issue Monitor — Autonomous OAuth Agent
+# ============================================================
+st.header("🔍 Stale Issue Monitor")
+st.caption(
+    "Autonomous OAuth agent — retrieves its own GitHub token from Token Vault, "
+    "monitors repos for stale issues, and comments/labels with CIBA approval."
+)
+
+from agents.stale_issue_monitor import run_stale_issue_monitor
+
+# Repo configuration
+sim_col1, sim_col2, sim_col3 = st.columns([2, 2, 6])
+with sim_col1:
+    sim_owner = st.text_input("Owner", value="GautamRonanki", key="sim_owner")
+with sim_col2:
+    sim_repo = st.text_input("Repo", value="ctrlAI", key="sim_repo")
+
+sim_btn_col1, sim_btn_col2, sim_btn_col3 = st.columns([2, 2, 6])
+
+with sim_btn_col1:
+    run_scan = st.button("▶️ Run Scan", key="run_stale_scan", use_container_width=True)
+with sim_btn_col2:
+    run_and_act = st.button(
+        "▶️ Run & Act",
+        key="run_stale_act",
+        use_container_width=True,
+        help="Scan for stale issues and comment/label 2+ week stale issues (requires CIBA)",
+    )
+
+if run_scan or run_and_act:
+    with st.spinner(
+        "Stale Issue Monitor running through permission pipeline → Token Vault → GitHub API..."
+    ):
+        result = run_async(
+            run_stale_issue_monitor(
+                owner=sim_owner,
+                repo=sim_repo,
+                execute_actions=run_and_act,
+                ciba_approved=False,
+            )
+        )
+
+    if result["status"] == "blocked":
+        st.error(f"🚫 Blocked: {result['reason']}")
+
+    elif result["status"] == "error":
+        st.error(f"❌ Error: {result['reason']}")
+
+    elif result["status"] == "awaiting_ciba":
+        st.warning(f"🔐 {result['reason']}")
+        st.markdown(result.get("report", ""))
+
+        # CIBA approval button
+        if st.button(
+            "✅ Approve & Execute", key="sim_ciba_approve", use_container_width=True
+        ):
+            with st.spinner("Executing high-stakes actions with CIBA approval..."):
+                approved_result = run_async(
+                    run_stale_issue_monitor(
+                        owner=sim_owner,
+                        repo=sim_repo,
+                        execute_actions=True,
+                        ciba_approved=True,
+                    )
+                )
+            if approved_result["status"] == "success":
+                st.success("✅ Actions executed with CIBA approval")
+                if approved_result.get("actions_taken"):
+                    for action in approved_result["actions_taken"]:
+                        st.markdown(
+                            f"  ✅ Issue #{action['issue']} — {action['action']}"
+                        )
+                if approved_result.get("actions_blocked"):
+                    for action in approved_result["actions_blocked"]:
+                        st.markdown(
+                            f"  ❌ Issue #{action['issue']} — {action['action']}: {action['error']}"
+                        )
+            else:
+                st.error(f"❌ {approved_result.get('reason', 'Unknown error')}")
+
+    elif result["status"] == "success":
+        st.success("✅ Scan complete")
+        st.markdown(result.get("report", ""))
+
+        # Summary metrics
+        summary = result.get("summary", {})
+        sm1, sm2, sm3, sm4, sm5 = st.columns(5)
+        with sm1:
+            st.metric("Total Issues", summary.get("total_issues", 0))
+        with sm2:
+            st.metric("Active", summary.get("active", 0))
+        with sm3:
+            st.metric("1-2 Weeks", summary.get("one_to_two_weeks", 0))
+        with sm4:
+            st.metric("2 Weeks", summary.get("two_weeks", 0))
+        with sm5:
+            st.metric("2+ Weeks", summary.get("two_plus_weeks", 0))
+
+        # Show stale issues detail
+        categories = result.get("categories", {})
+
+        if categories.get("two_plus_weeks"):
+            st.subheader("🔴 2+ Weeks Inactive")
+            for issue in categories["two_plus_weeks"]:
+                st.markdown(
+                    f"  • **#{issue['number']}** — {issue['title']} "
+                    f"({issue['days_inactive']} days) — [{issue['author']}]({issue['url']})"
+                )
+
+        if categories.get("two_weeks"):
+            st.subheader("🟠 2 Weeks Inactive")
+            for issue in categories["two_weeks"]:
+                st.markdown(
+                    f"  • **#{issue['number']}** — {issue['title']} "
+                    f"({issue['days_inactive']} days) — [{issue['author']}]({issue['url']})"
+                )
+
+        if categories.get("one_to_two_weeks"):
+            st.subheader("🟡 1-2 Weeks Inactive")
+            for issue in categories["one_to_two_weeks"]:
+                st.markdown(
+                    f"  • **#{issue['number']}** — {issue['title']} "
+                    f"({issue['days_inactive']} days) — [{issue['author']}]({issue['url']})"
+                )
+
+        # Show actions if any were taken
+        if result.get("actions_taken"):
+            st.subheader("✅ Actions Taken")
+            for action in result["actions_taken"]:
+                st.markdown(f"  ✅ Issue #{action['issue']} — {action['action']}")
 
 st.divider()
 
