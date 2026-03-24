@@ -648,7 +648,7 @@ with sim_col1:
 with sim_col2:
     sim_repo = st.text_input("Repo", value="ctrlAI", key="sim_repo")
 
-sim_btn_col1, sim_btn_col2, sim_btn_col3 = st.columns([2, 2, 6])
+sim_btn_col1, sim_btn_col2, sim_btn_col3, sim_btn_col4 = st.columns([2, 2, 2, 4])
 
 with sim_btn_col1:
     run_scan = st.button("▶️ Run Scan", key="run_stale_scan", use_container_width=True)
@@ -658,6 +658,12 @@ with sim_btn_col2:
         key="run_stale_act",
         use_container_width=True,
         help="Scan for stale issues and comment/label 2+ week stale issues (requires CIBA)",
+    )
+with sim_btn_col3:
+    test_mode = st.checkbox(
+        "🧪 Test Mode",
+        key="sim_test_mode",
+        help="Sets threshold to 0 days so all issues appear stale",
     )
 
 if run_scan or run_and_act:
@@ -670,8 +676,17 @@ if run_scan or run_and_act:
                 repo=sim_repo,
                 execute_actions=run_and_act,
                 ciba_approved=False,
+                stale_threshold_override=0 if test_mode else None,
             )
         )
+    st.session_state["sim_result"] = result
+    st.session_state["sim_owner_val"] = sim_owner
+    st.session_state["sim_repo_val"] = sim_repo
+    st.session_state["sim_test_val"] = test_mode
+
+# Display result from session state
+if "sim_result" in st.session_state:
+    result = st.session_state["sim_result"]
 
     if result["status"] == "blocked":
         st.error(f"🚫 Blocked: {result['reason']}")
@@ -683,39 +698,28 @@ if run_scan or run_and_act:
         st.warning(f"🔐 {result['reason']}")
         st.markdown(result.get("report", ""))
 
-        # CIBA approval button
         if st.button(
             "✅ Approve & Execute", key="sim_ciba_approve", use_container_width=True
         ):
             with st.spinner("Executing high-stakes actions with CIBA approval..."):
                 approved_result = run_async(
                     run_stale_issue_monitor(
-                        owner=sim_owner,
-                        repo=sim_repo,
+                        owner=st.session_state.get("sim_owner_val", "GautamRonanki"),
+                        repo=st.session_state.get("sim_repo_val", "ctrlAI"),
                         execute_actions=True,
                         ciba_approved=True,
+                        stale_threshold_override=0
+                        if st.session_state.get("sim_test_val")
+                        else None,
                     )
                 )
-            if approved_result["status"] == "success":
-                st.success("✅ Actions executed with CIBA approval")
-                if approved_result.get("actions_taken"):
-                    for action in approved_result["actions_taken"]:
-                        st.markdown(
-                            f"  ✅ Issue #{action['issue']} — {action['action']}"
-                        )
-                if approved_result.get("actions_blocked"):
-                    for action in approved_result["actions_blocked"]:
-                        st.markdown(
-                            f"  ❌ Issue #{action['issue']} — {action['action']}: {action['error']}"
-                        )
-            else:
-                st.error(f"❌ {approved_result.get('reason', 'Unknown error')}")
+            st.session_state["sim_result"] = approved_result
+            st.rerun()
 
     elif result["status"] == "success":
         st.success("✅ Scan complete")
         st.markdown(result.get("report", ""))
 
-        # Summary metrics
         summary = result.get("summary", {})
         sm1, sm2, sm3, sm4, sm5 = st.columns(5)
         with sm1:
@@ -729,7 +733,6 @@ if run_scan or run_and_act:
         with sm5:
             st.metric("2+ Weeks", summary.get("two_plus_weeks", 0))
 
-        # Show stale issues detail
         categories = result.get("categories", {})
 
         if categories.get("two_plus_weeks"):
@@ -756,12 +759,17 @@ if run_scan or run_and_act:
                     f"({issue['days_inactive']} days) — [{issue['author']}]({issue['url']})"
                 )
 
-        # Show actions if any were taken
         if result.get("actions_taken"):
             st.subheader("✅ Actions Taken")
             for action in result["actions_taken"]:
                 st.markdown(f"  ✅ Issue #{action['issue']} — {action['action']}")
 
+        if result.get("actions_blocked"):
+            st.subheader("❌ Actions Blocked")
+            for action in result["actions_blocked"]:
+                st.markdown(
+                    f"  ❌ Issue #{action['issue']} — {action['action']}: {action['error']}"
+                )
 st.divider()
 
 # ============================================================

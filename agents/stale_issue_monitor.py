@@ -54,18 +54,19 @@ async def _fetch_open_issues(
     return issues
 
 
-def _categorize_issues(issues: list[dict]) -> dict:
-    """Categorize issues by staleness: 1-2 weeks, 2 weeks, 2+ weeks."""
+def _categorize_issues(issues: list[dict], threshold_days: int = 7) -> dict:
+    """Categorize issues by staleness relative to threshold."""
     now = datetime.now(timezone.utc)
     categories = {
-        "one_to_two_weeks": [],  # 7-13 days
-        "two_weeks": [],  # exactly 14 days
-        "two_plus_weeks": [],  # more than 14 days
-        "active": [],  # less than 7 days
+        "one_to_two_weeks": [],
+        "two_weeks": [],
+        "two_plus_weeks": [],
+        "active": [],
     }
 
+    two_week_threshold = threshold_days * 2
+
     for issue in issues:
-        # Use updated_at as the last activity timestamp
         updated_str = issue.get("updated_at", issue.get("created_at", ""))
         if not updated_str:
             continue
@@ -83,11 +84,11 @@ def _categorize_issues(issues: list[dict]) -> dict:
             "labels": [l.get("name") for l in issue.get("labels", [])],
         }
 
-        if days_inactive > 14:
+        if days_inactive >= two_week_threshold:
             categories["two_plus_weeks"].append(entry)
-        elif days_inactive == 14:
-            categories["two_weeks"].append(entry)
-        elif days_inactive >= 7:
+        elif days_inactive >= threshold_days:
+            categories["one_to_two_weeks"].append(entry)
+        elif days_inactive >= threshold_days:
             categories["one_to_two_weeks"].append(entry)
         else:
             categories["active"].append(entry)
@@ -192,6 +193,7 @@ async def run_stale_issue_monitor(
     repo: str = DEFAULT_REPO,
     execute_actions: bool = False,
     ciba_approved: bool = False,
+    stale_threshold_override: int | None = None,
 ) -> dict:
     """
     Main entry point. Runs the full stale issue analysis.
@@ -261,7 +263,8 @@ async def run_stale_issue_monitor(
     if issues is None:
         return {"status": "error", "reason": "Failed to fetch issues from GitHub API."}
 
-    categories = _categorize_issues(issues)
+    threshold = stale_threshold_override if stale_threshold_override is not None else 7
+    categories = _categorize_issues(issues, threshold_days=threshold)
 
     # ── Generate LLM summary ──
     summary_prompt = f"""You are a GitHub project health analyst. Analyze these stale issue categories for the repo {owner}/{repo}:

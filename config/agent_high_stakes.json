@@ -1,3 +1,7 @@
 {
-  "gmail_agent": []
+  "gmail_agent": [],
+  "stale_issue_monitor": [
+    "post_stale_comment",
+    "add_stale_label"
+  ]
 }
