@@ -6,6 +6,7 @@ Identity and Permission Control Plane for AI Agents.
 import json
 import asyncio
 import streamlit as st
+import streamlit.components.v1 as components
 import pandas as pd
 import sys
 from pathlib import Path
@@ -31,6 +32,7 @@ st.markdown(
         margin-bottom: 10px;
         background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
         box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+        box-sizing: border-box;
     }
     .agent-card-suspended {
         border: 1px solid #ffcdd2;
@@ -39,6 +41,7 @@ st.markdown(
         margin-bottom: 10px;
         background: linear-gradient(135deg, #fff5f5 0%, #ffffff 100%);
         box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+        box-sizing: border-box;
     }
     .agent-name {
         font-size: 1.1em;
@@ -209,39 +212,51 @@ agents = get_all_agents()
 
 # Plain language scope descriptions
 SCOPE_LABELS = {
-    "gmail.readonly": "Can read your emails",
-    "gmail.send": "Can send emails on your behalf",
-    "drive.readonly": "Can view your Drive files",
-    "drive.file": "Can create and manage files in Drive",
-    "calendar.events.readonly": "Can view your calendar events",
-    "calendar.events": "Can create and modify calendar events",
-    "repo": "Can access your GitHub repositories",
-    "read:user": "Can read your GitHub profile",
-    "audit.read": "Can read the audit trail",
-    "report.generate": "Can generate security reports",
-    "repo:read": "Can read repository information",
-    "issues:read": "Can read issues",
-    "issues:write": "Can post comments on issues",
-    "issues:label": "Can add labels to issues",
+    "read_emails": "Read emails",
+    "send_emails": "Send emails",
+    "list_emails": "List emails",
+    "search_emails": "Search emails",
+    "list_files": "List files",
+    "read_files": "Read files",
+    "create_files": "Create files",
+    "delete_files": "Delete files",
+    "search_files": "Search files",
+    "list_events": "List events",
+    "read_events": "Read events",
+    "create_events": "Create events",
+    "modify_events": "Modify events",
+    "list_repos": "List repositories",
+    "read_repos": "Read repositories",
+    "list_issues": "List issues",
+    "read_issues": "Read issues",
+    "post_comments": "Post comments",
+    "add_labels": "Add labels",
+    "read_audit_trail": "Read audit trail",
+    "generate_reports": "Generate reports",
 }
 
 ACTION_LABELS = {
-    "send_email": "Sending an email",
-    "list_emails": "Listing emails",
-    "search_emails": "Searching emails",
-    "read_email": "Reading an email",
-    "delete_file": "Deleting a file",
-    "list_files": "Listing files",
-    "search_files": "Searching files",
-    "create_event": "Creating a calendar event",
-    "list_events": "Listing calendar events",
-    "create_comment": "Posting a GitHub comment",
-    "list_repos": "Listing repositories",
-    "list_issues": "Listing issues",
-    "send_alert_email": "Sending a security alert email",
-    "generate_report": "Generating a security report",
-    "post_stale_comment": "Posting a comment on a stale issue",
-    "add_stale_label": "Adding a stale label to an issue",
+    "send_emails": "Send emails",
+    "list_emails": "List emails",
+    "search_emails": "Search emails",
+    "read_emails": "Read emails",
+    "delete_files": "Delete files",
+    "list_files": "List files",
+    "search_files": "Search files",
+    "read_files": "Read files",
+    "create_files": "Create files",
+    "create_events": "Create events",
+    "modify_events": "Modify events",
+    "list_events": "List events",
+    "read_events": "Read events",
+    "post_comments": "Post comments",
+    "list_repos": "List repositories",
+    "list_issues": "List issues",
+    "read_repos": "Read repositories",
+    "read_issues": "Read issues",
+    "add_labels": "Add labels",
+    "send_alert_emails": "Send alert emails",
+    "generate_reports": "Generate reports",
 }
 
 PROVIDER_LABELS = {
@@ -329,41 +344,71 @@ def show_permission_dialog(agent_name: str):
         st.rerun()
 
 
-# Render agent cards
-cols = st.columns(3)
-for i, (name, agent) in enumerate(agents.items()):
-    with cols[i % 3]:
-        is_active = agent.status == AgentStatus.ACTIVE
-        card_class = "agent-card" if is_active else "agent-card-suspended"
-        status_class = "status-active" if is_active else "status-suspended"
-        status_label = "Active" if is_active else "Suspended"
-        status_emoji = "🟢" if is_active else "🔴"
+# Render agent cards row by row so cards in the same row share equal height
+agent_list = list(agents.items())
+for row_start in range(0, len(agent_list), 3):
+    row_agents = agent_list[row_start:row_start + 3]
+    cols = st.columns(3)
+    for j, (name, agent) in enumerate(row_agents):
+        with cols[j]:
+            is_active = agent.status == AgentStatus.ACTIVE
+            card_class = "agent-card" if is_active else "agent-card-suspended"
+            status_class = "status-active" if is_active else "status-suspended"
+            status_label = "Active" if is_active else "Suspended"
+            status_emoji = "🟢" if is_active else "🔴"
 
-        scope_badges = "".join(
-            f'<span class="scope-badge">{SCOPE_LABELS.get(s, s)}</span>'
-            for s in agent.permitted_scopes
-        )
-        highstakes_badges = "".join(
-            f'<span class="highstakes-badge">{ACTION_LABELS.get(s, s)}</span>'
-            for s in agent.high_stakes_actions
-        )
+            scope_badges = "".join(
+                f'<span class="scope-badge">{SCOPE_LABELS.get(s, s)}</span>'
+                for s in agent.permitted_scopes
+            )
+            highstakes_badges = "".join(
+                f'<span class="highstakes-badge">{ACTION_LABELS.get(s, s)}</span>'
+                for s in agent.high_stakes_actions
+            )
 
-        st.markdown(
-            f"""
-        <div class="{card_class}">
-            <div class="agent-name">{status_emoji} {humanize(name)}</div>
-            <div class="agent-detail">{agent.description}</div>
-            <div class="agent-detail" style="margin-top:8px;"><b>Provider:</b> {PROVIDER_LABELS.get(agent.oauth_provider, agent.oauth_provider)}</div>
-            <div class="agent-detail"><b>Permissions:</b> {scope_badges}</div>
-            <div class="agent-detail"><b>Requires Approval:</b> {highstakes_badges if highstakes_badges else '<span style="color:#888;">None</span>'}</div>
-            <div class="agent-detail" style="margin-top:6px;"><b>Status:</b> <span class="{status_class}">{status_label}</span></div>
-        </div>
-        """,
-            unsafe_allow_html=True,
-        )
+            st.markdown(
+                f"""
+            <div class="{card_class}">
+                <div class="agent-name">{status_emoji} {humanize(name)}</div>
+                <div class="agent-detail">{agent.description}</div>
+                <div class="agent-detail" style="margin-top:8px;"><b>Provider:</b> {PROVIDER_LABELS.get(agent.oauth_provider, agent.oauth_provider)}</div>
+                <div class="agent-detail"><b>Permissions:</b> {scope_badges}</div>
+                <div class="agent-detail"><b>Requires Approval:</b> {highstakes_badges if highstakes_badges else '<span style="color:#888;">None</span>'}</div>
+                <div class="agent-detail" style="margin-top:6px;"><b>Status:</b> <span class="{status_class}">{status_label}</span></div>
+            </div>
+            """,
+                unsafe_allow_html=True,
+            )
 
-        if st.button("⚙️ Manage", key=f"settings_{name}", use_container_width=True):
-            show_permission_dialog(name)
+            if st.button("⚙️ Manage", key=f"settings_{name}", use_container_width=True):
+                show_permission_dialog(name)
+
+# Equalize card heights across columns in each row via JS
+components.html(
+    """
+    <script>
+    (function equalizeCards() {
+        const doc = window.parent.document;
+        function run() {
+            const rows = doc.querySelectorAll('[data-testid="stHorizontalBlock"]');
+            rows.forEach(row => {
+                const cards = row.querySelectorAll('.agent-card, .agent-card-suspended');
+                if (cards.length < 2) return;
+                // Reset so we measure natural height
+                cards.forEach(c => { c.style.height = 'auto'; });
+                const maxH = Math.max(...Array.from(cards).map(c => c.getBoundingClientRect().height));
+                cards.forEach(c => { c.style.height = maxH + 'px'; });
+            });
+        }
+        // Run immediately and after Streamlit finishes painting
+        run();
+        setTimeout(run, 200);
+        setTimeout(run, 800);
+    })();
+    </script>
+    """,
+    height=0,
+)
 
 st.divider()
 # ============================================================

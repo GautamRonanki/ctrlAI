@@ -1,6 +1,6 @@
 """
 Google Calendar Agent for ctrlAI.
-Reads and creates calendar events via the Google Calendar API.
+Manages your Google Calendar — viewing your schedule and coordinating events on your behalf.
 Each function checks permissions before executing.
 """
 
@@ -18,9 +18,9 @@ async def list_events(
     google_token: str, max_results: int = 5, agent_name: str = "calendar_agent"
 ) -> dict:
     """List upcoming calendar events."""
-    if not check_scope_permission(agent_name, "calendar.events.readonly"):
+    if not check_scope_permission(agent_name, "list_events"):
         return {
-            "error": f"Permission denied: {agent_name} does not have calendar.events.readonly scope"
+            "error": f"Permission denied: {agent_name} does not have list_events scope"
         }
 
     from datetime import datetime, timezone
@@ -88,16 +88,16 @@ async def create_event(
 
     start_time and end_time should be ISO format (e.g., "2026-03-21T10:00:00-04:00")
     """
-    if not check_scope_permission(agent_name, "calendar.events"):
+    if not check_scope_permission(agent_name, "create_events"):
         return {
-            "error": f"Permission denied: {agent_name} does not have calendar.events scope"
+            "error": f"Permission denied: {agent_name} does not have create_events scope"
         }
 
-    if is_high_stakes(agent_name, "create_event"):
+    if is_high_stakes(agent_name, "create_events"):
         log_audit(
             event_type="high_stakes_action",
             agent_name=agent_name,
-            action="create_event",
+            action="create_events",
             status="executing",
             details={"summary": summary, "start": start_time},
         )
@@ -135,7 +135,7 @@ async def create_event(
     log_audit(
         event_type="action_completed",
         agent_name=agent_name,
-        action="create_event",
+        action="create_events",
         status="success",
         details={"summary": summary, "event_id": result.get("id")},
     )

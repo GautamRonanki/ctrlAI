@@ -1,6 +1,6 @@
 """
 Security Report Agent — Autonomous agent for ctrlAI.
-Monitors the audit trail, generates security summaries, and alerts on violations.
+Autonomous security monitor — analyzes agent activity and alerts administrators on policy violations.
 This agent runs autonomously — no employee triggers it.
 """
 
@@ -57,7 +57,6 @@ def _analyze_entries(entries: list[dict]) -> dict:
     ]
     errors = [e for e in entries if e.get("status") == "error"]
 
-    # Determine if there are critical issues
     has_critical = len(denied) > 0 or len(inter_agent_denied) > 0 or len(errors) > 0
 
     return {
@@ -79,12 +78,11 @@ def _analyze_entries(entries: list[dict]) -> dict:
 async def generate_security_report() -> dict:
     """Generate a security report from the audit trail."""
 
-    # ── Permission checks — same governance as every other agent ──
     if not is_agent_active("security_report_agent"):
         log_audit(
             "agent_execution",
             "security_report_agent",
-            "generate_report",
+            "generate_reports",
             "denied",
             {"reason": "agent suspended"},
         )
@@ -93,30 +91,29 @@ async def generate_security_report() -> dict:
             "reason": "Security Report Agent is currently suspended by the administrator.",
         }
 
-    if not check_scope_permission("security_report_agent", "audit.read"):
+    if not check_scope_permission("security_report_agent", "read_audit_trail"):
         return {
             "status": "blocked",
-            "reason": "Security Report Agent does not have the 'audit.read' scope.",
+            "reason": "Security Report Agent does not have the 'read_audit_trail' scope.",
         }
 
-    if not check_scope_permission("security_report_agent", "report.generate"):
+    if not check_scope_permission("security_report_agent", "generate_reports"):
         return {
             "status": "blocked",
-            "reason": "Security Report Agent does not have the 'report.generate' scope.",
+            "reason": "Security Report Agent does not have the 'generate_reports' scope.",
         }
 
     log_audit(
-        "agent_execution", "security_report_agent", "generate_report", "started", {}
+        "agent_execution", "security_report_agent", "generate_reports", "started", {}
     )
 
-    # ── Load and analyze audit data ──
     entries = _load_recent_audit_entries(hours=24)
 
     if not entries:
         log_audit(
             "agent_execution",
             "security_report_agent",
-            "generate_report",
+            "generate_reports",
             "success",
             {"result": "no_entries"},
         )
@@ -129,10 +126,8 @@ async def generate_security_report() -> dict:
 
     analysis = _analyze_entries(entries)
 
-    # ── Use LLM to generate the report ──
     llm = get_llm()
 
-    # Truncate entries for context window
     analysis_str = json.dumps(
         {
             "total_events": analysis["total_events"],
@@ -205,7 +200,7 @@ Keep it concise and professional. Use Slack formatting: *single asterisks* for b
     log_audit(
         "agent_execution",
         "security_report_agent",
-        "generate_report",
+        "generate_reports",
         "success",
         {
             "total_events": analysis["total_events"],
@@ -225,7 +220,6 @@ Keep it concise and professional. Use Slack formatting: *single asterisks* for b
 async def send_alert_email(report: str, gmail_token: str) -> dict:
     """Send a security alert email via the Gmail Agent. Requires inter-agent permission."""
 
-    # Check inter-agent permission
     if not check_inter_agent_permission(
         "security_report_agent", "gmail_agent", "send_alert_email"
     ):
@@ -234,7 +228,6 @@ async def send_alert_email(report: str, gmail_token: str) -> dict:
             "reason": "Security Report Agent is not permitted to send emails through Gmail Agent.",
         }
 
-    # Send via Gmail Agent
     from agents.gmail_agent import send_email
 
     admin_email = os.getenv("ADMIN_ALERT_EMAIL", "")
@@ -255,7 +248,7 @@ async def send_alert_email(report: str, gmail_token: str) -> dict:
     log_audit(
         "inter_agent_execution",
         "security_report_agent",
-        "send_alert_email",
+        "send_alert_emails",
         "success" if "error" not in result else "error",
         {"target_agent": "gmail_agent", "admin_email": admin_email},
     )

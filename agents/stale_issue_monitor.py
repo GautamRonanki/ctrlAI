@@ -1,7 +1,6 @@
 """
 Stale Issue Monitor — Autonomous OAuth Agent for ctrlAI.
-Monitors GitHub repos for stale issues, categorizes by inactivity period,
-and posts comments / adds labels on stale issues (with CIBA approval).
+Autonomous GitHub monitor — identifies inactive issues and keeps your project board healthy.
 
 This agent retrieves its own GitHub OAuth token from Token Vault directly.
 It is not triggered by employees — it runs on schedule or manual trigger.
@@ -49,7 +48,6 @@ async def _fetch_open_issues(
         logger.error(f"GitHub API error: {response.status_code} {response.text}")
         return None
 
-    # Filter out pull requests (GitHub returns PRs in the issues endpoint)
     issues = [i for i in response.json() if "pull_request" not in i]
     return issues
 
@@ -88,8 +86,6 @@ def _categorize_issues(issues: list[dict], threshold_days: int = 7) -> dict:
             categories["two_plus_weeks"].append(entry)
         elif days_inactive >= threshold_days:
             categories["one_to_two_weeks"].append(entry)
-        elif days_inactive >= threshold_days:
-            categories["one_to_two_weeks"].append(entry)
         else:
             categories["active"].append(entry)
 
@@ -100,9 +96,9 @@ async def _post_stale_comment(
     github_token: str, owner: str, repo: str, issue_number: int, days_inactive: int
 ) -> dict:
     """Post a comment on a stale issue. HIGH-STAKES — caller must verify CIBA."""
-    if not check_scope_permission(AGENT_NAME, "issues:write"):
+    if not check_scope_permission(AGENT_NAME, "post_comments"):
         return {
-            "error": f"Permission denied: {AGENT_NAME} does not have issues:write scope"
+            "error": f"Permission denied: {AGENT_NAME} does not have post_comments scope"
         }
 
     body = (
@@ -134,7 +130,7 @@ async def _post_stale_comment(
     log_audit(
         "action_completed",
         AGENT_NAME,
-        "post_stale_comment",
+        "post_comments",
         "success",
         {
             "repo": f"{owner}/{repo}",
@@ -153,9 +149,9 @@ async def _add_stale_label(
     github_token: str, owner: str, repo: str, issue_number: int
 ) -> dict:
     """Add a 'stale' label to an issue. HIGH-STAKES — caller must verify CIBA."""
-    if not check_scope_permission(AGENT_NAME, "issues:label"):
+    if not check_scope_permission(AGENT_NAME, "add_labels"):
         return {
-            "error": f"Permission denied: {AGENT_NAME} does not have issues:label scope"
+            "error": f"Permission denied: {AGENT_NAME} does not have add_labels scope"
         }
 
     start = time.time()
@@ -178,7 +174,7 @@ async def _add_stale_label(
     log_audit(
         "action_completed",
         AGENT_NAME,
-        "add_stale_label",
+        "add_labels",
         "success",
         {
             "repo": f"{owner}/{repo}",
@@ -197,14 +193,7 @@ async def run_stale_issue_monitor(
 ) -> dict:
     """
     Main entry point. Runs the full stale issue analysis.
-
-    Args:
-        owner: GitHub repo owner
-        repo: GitHub repo name
-        execute_actions: If True, attempt to comment/label stale issues (requires CIBA)
-        ciba_approved: If True, CIBA approval has been granted for high-stakes actions
     """
-    # ── Permission checks ──
     if not is_agent_active(AGENT_NAME):
         log_audit(
             "agent_execution",
@@ -218,16 +207,16 @@ async def run_stale_issue_monitor(
             "reason": "Stale Issue Monitor is currently suspended by the administrator.",
         }
 
-    if not check_scope_permission(AGENT_NAME, "repo:read"):
+    if not check_scope_permission(AGENT_NAME, "read_repos"):
         return {
             "status": "blocked",
-            "reason": "Stale Issue Monitor does not have the 'repo:read' scope.",
+            "reason": "Stale Issue Monitor does not have the 'read_repos' scope.",
         }
 
-    if not check_scope_permission(AGENT_NAME, "issues:read"):
+    if not check_scope_permission(AGENT_NAME, "read_issues"):
         return {
             "status": "blocked",
-            "reason": "Stale Issue Monitor does not have the 'issues:read' scope.",
+            "reason": "Stale Issue Monitor does not have the 'read_issues' scope.",
         }
 
     # ── Token Vault retrieval ──
@@ -301,15 +290,14 @@ Keep it concise and actionable."""
 
     if execute_actions and categories["two_plus_weeks"]:
         if not ciba_approved:
-            # Need CIBA approval before proceeding
-            needs_ciba = is_high_stakes(
-                AGENT_NAME, "post_stale_comment"
-            ) or is_high_stakes(AGENT_NAME, "add_stale_label")
+            needs_ciba = is_high_stakes(AGENT_NAME, "post_comments") or is_high_stakes(
+                AGENT_NAME, "add_labels"
+            )
             if needs_ciba:
                 log_audit(
                     "ciba",
                     AGENT_NAME,
-                    "post_stale_comment",
+                    "post_comments",
                     "requesting_approval",
                     {
                         "issues_count": len(categories["two_plus_weeks"]),
@@ -323,10 +311,8 @@ Keep it concise and actionable."""
                     "stale_count": len(categories["two_plus_weeks"]),
                 }
         else:
-            # CIBA approved — execute actions
             for issue in categories["two_plus_weeks"]:
-                # Post comment
-                if check_scope_permission(AGENT_NAME, "issues:write"):
+                if check_scope_permission(AGENT_NAME, "post_comments"):
                     comment_result = await _post_stale_comment(
                         github_token,
                         owner,
@@ -351,8 +337,7 @@ Keep it concise and actionable."""
                             }
                         )
 
-                # Add label
-                if check_scope_permission(AGENT_NAME, "issues:label"):
+                if check_scope_permission(AGENT_NAME, "add_labels"):
                     label_result = await _add_stale_label(
                         github_token, owner, repo, issue["number"]
                     )

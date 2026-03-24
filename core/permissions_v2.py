@@ -40,28 +40,28 @@ class AgentIdentity:
 DEFAULT_AGENT_REGISTRY: dict[str, dict] = {
     "gmail_agent": {
         "name": "gmail_agent",
-        "description": "Reads and sends emails via Gmail",
+        "description": "Manages your Gmail inbox — reading, composing, and organizing emails on your behalf",
         "oauth_provider": "google",
         "permitted_scopes": ["gmail.readonly", "gmail.send"],
         "high_stakes_actions": ["send_email"],
     },
     "drive_agent": {
         "name": "drive_agent",
-        "description": "Reads and manages files in Google Drive",
+        "description": "Manages your Google Drive — accessing, organizing, and maintaining your files and documents",
         "oauth_provider": "google",
         "permitted_scopes": ["drive.readonly", "drive.file"],
         "high_stakes_actions": ["delete_file"],
     },
     "calendar_agent": {
         "name": "calendar_agent",
-        "description": "Reads and manages Google Calendar events",
+        "description": "Manages your Google Calendar — viewing your schedule and coordinating events on your behalf",
         "oauth_provider": "google",
         "permitted_scopes": ["calendar.events.readonly", "calendar.events"],
         "high_stakes_actions": ["create_event"],
     },
     "github_agent": {
         "name": "github_agent",
-        "description": "Reads repos and manages GitHub issues",
+        "description": "Manages your GitHub workflow — monitoring repositories, issues, and code activity",
         "oauth_provider": "github",
         "permitted_scopes": ["repo", "read:user"],
         "high_stakes_actions": ["create_comment"],

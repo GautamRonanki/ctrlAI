@@ -1,6 +1,6 @@
 """
 Gmail Agent for ctrlAI.
-Reads and sends emails via the Gmail API using tokens from Token Service.
+Manages your Gmail inbox — reading, composing, and organizing emails on your behalf.
 Each function checks permissions before executing.
 """
 
@@ -21,10 +21,9 @@ async def list_emails(
     google_token: str, max_results: int = 5, agent_name: str = "gmail_agent"
 ) -> dict:
     """List recent emails from the user's inbox."""
-    # Permission check
-    if not check_scope_permission(agent_name, "gmail.readonly"):
+    if not check_scope_permission(agent_name, "list_emails"):
         return {
-            "error": f"Permission denied: {agent_name} does not have gmail.readonly scope"
+            "error": f"Permission denied: {agent_name} does not have list_emails scope"
         }
 
     start = time.time()
@@ -44,7 +43,6 @@ async def list_emails(
 
     messages = response.json().get("messages", [])
 
-    # Fetch details for each message
     results = []
     for msg in messages:
         detail = await _get_message_detail(google_token, msg["id"], agent_name)
@@ -58,9 +56,9 @@ async def read_email(
     google_token: str, message_id: str, agent_name: str = "gmail_agent"
 ) -> dict:
     """Read a specific email by ID."""
-    if not check_scope_permission(agent_name, "gmail.readonly"):
+    if not check_scope_permission(agent_name, "read_emails"):
         return {
-            "error": f"Permission denied: {agent_name} does not have gmail.readonly scope"
+            "error": f"Permission denied: {agent_name} does not have read_emails scope"
         }
 
     return await _get_message_detail(google_token, message_id, agent_name)
@@ -77,23 +75,20 @@ async def send_email(
     Send an email. This is a HIGH-STAKES action — requires CIBA approval.
     The caller must verify CIBA approval BEFORE calling this function.
     """
-    # Permission check
-    if not check_scope_permission(agent_name, "gmail.send"):
+    if not check_scope_permission(agent_name, "send_emails"):
         return {
-            "error": f"Permission denied: {agent_name} does not have gmail.send scope"
+            "error": f"Permission denied: {agent_name} does not have send_emails scope"
         }
 
-    # Log that this is a high-stakes action
-    if is_high_stakes(agent_name, "send_email"):
+    if is_high_stakes(agent_name, "send_emails"):
         log_audit(
             event_type="high_stakes_action",
             agent_name=agent_name,
-            action="send_email",
+            action="send_emails",
             status="executing",
             details={"to": to, "subject": subject},
         )
 
-    # Build the email
     message = MIMEText(body)
     message["to"] = to
     message["subject"] = subject
@@ -122,7 +117,7 @@ async def send_email(
     log_audit(
         event_type="action_completed",
         agent_name=agent_name,
-        action="send_email",
+        action="send_emails",
         status="success",
         details={"to": to, "subject": subject, "message_id": result.get("id")},
     )
@@ -134,9 +129,9 @@ async def search_emails(
     google_token: str, query: str, max_results: int = 5, agent_name: str = "gmail_agent"
 ) -> dict:
     """Search emails by query string (Gmail search syntax)."""
-    if not check_scope_permission(agent_name, "gmail.readonly"):
+    if not check_scope_permission(agent_name, "search_emails"):
         return {
-            "error": f"Permission denied: {agent_name} does not have gmail.readonly scope"
+            "error": f"Permission denied: {agent_name} does not have search_emails scope"
         }
 
     start = time.time()
