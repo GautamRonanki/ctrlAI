@@ -22,6 +22,12 @@ st.set_page_config(
     layout="wide",
 )
 
+# Initialize dialog states
+if "show_suspend_all_confirm" not in st.session_state:
+    st.session_state["show_suspend_all_confirm"] = False
+if "show_activate_all_confirm" not in st.session_state:
+    st.session_state["show_activate_all_confirm"] = False
+
 # ── Custom CSS for cards and styling ──
 st.markdown(
     """
@@ -253,81 +259,73 @@ with reg_btn_col:
         )
         activate_all_clicked = False
 
+
+@st.dialog("⚠️ Suspend All Agents")
+def confirm_suspend_all():
+    st.warning(
+        "This will suspend **all agents immediately**. "
+        "No agent will be able to access any service or execute any action "
+        "until reactivated by an administrator."
+    )
+    st.markdown("")
+    col_cancel, col_suspend = st.columns(2)
+    with col_cancel:
+        if st.button("Cancel", key="cancel_suspend_all", use_container_width=True):
+            st.session_state["show_suspend_all_confirm"] = False
+            st.rerun()
+    with col_suspend:
+        if st.button(
+            "🛑 Suspend All", key="confirm_suspend_all_btn", use_container_width=True
+        ):
+            for agent_name in get_all_agents():
+                suspend_agent(agent_name)
+            st.session_state["show_suspend_all_confirm"] = False
+            log_audit(
+                "admin_action",
+                "admin",
+                "suspend_all_agents",
+                "success",
+                {"agents_suspended": len(get_all_agents())},
+            )
+            st.rerun()
+
+
+@st.dialog("▶️ Activate All Agents")
+def confirm_activate_all():
+    st.info(
+        "This will reactivate **all agents immediately**. "
+        "Every agent will regain access to its permitted services and scopes."
+    )
+    st.markdown("")
+    col_cancel, col_activate = st.columns(2)
+    with col_cancel:
+        if st.button("Cancel", key="cancel_activate_all", use_container_width=True):
+            st.session_state["show_activate_all_confirm"] = False
+            st.rerun()
+    with col_activate:
+        if st.button(
+            "▶️ Activate All",
+            key="confirm_activate_all_btn",
+            use_container_width=True,
+            type="primary",
+        ):
+            for agent_name in get_all_agents():
+                activate_agent(agent_name)
+            st.session_state["show_activate_all_confirm"] = False
+            log_audit(
+                "admin_action",
+                "admin",
+                "activate_all_agents",
+                "success",
+                {"agents_activated": len(get_all_agents())},
+            )
+            st.rerun()
+
+
 if suspend_all_clicked:
-    st.session_state["show_suspend_all_confirm"] = True
-
-if activate_all_clicked:
-    st.session_state["show_activate_all_confirm"] = True
-
-if st.session_state.get("show_suspend_all_confirm"):
-
-    @st.dialog("⚠️ Suspend All Agents")
-    def confirm_suspend_all():
-        st.warning(
-            "This will suspend **all agents immediately**. "
-            "No agent will be able to access any service or execute any action "
-            "until reactivated by an administrator."
-        )
-        st.markdown("")
-        col_cancel, col_suspend = st.columns(2)
-        with col_cancel:
-            if st.button("Cancel", key="cancel_suspend_all", use_container_width=True):
-                st.session_state["show_suspend_all_confirm"] = False
-                st.rerun()
-        with col_suspend:
-            if st.button(
-                "🛑 Suspend All",
-                key="confirm_suspend_all",
-                use_container_width=True,
-                type="primary",
-            ):
-                for agent_name in get_all_agents():
-                    suspend_agent(agent_name)
-                st.session_state["show_suspend_all_confirm"] = False
-                log_audit(
-                    "admin_action",
-                    "admin",
-                    "suspend_all_agents",
-                    "success",
-                    {"agents_suspended": len(get_all_agents())},
-                )
-                st.rerun()
-
     confirm_suspend_all()
 
-if st.session_state.get("show_activate_all_confirm"):
-
-    @st.dialog("🟢 Activate All Agents")
-    def confirm_activate_all():
-        st.info(
-            "This will reactivate **all agents immediately**. "
-            "Every agent will regain access to its permitted services and scopes."
-        )
-        st.markdown("")
-        col_cancel, col_activate = st.columns(2)
-        with col_cancel:
-            if st.button("Cancel", key="cancel_activate_all", use_container_width=True):
-                st.session_state["show_activate_all_confirm"] = False
-                st.rerun()
-        with col_activate:
-            if st.button(
-                "🟢 Activate All",
-                key="confirm_activate_all",
-                use_container_width=True,
-                type="primary",
-            ):
-                for agent_name in get_all_agents():
-                    activate_agent(agent_name)
-                st.session_state["show_activate_all_confirm"] = False
-                log_audit(
-                    "admin_action",
-                    "admin",
-                    "activate_all_agents",
-                    "success",
-                    {"agents_activated": len(get_all_agents())},
-                )
-                st.rerun()
-
+if activate_all_clicked:
     confirm_activate_all()
 
 agents = get_all_agents()

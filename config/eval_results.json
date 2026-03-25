@@ -1,5 +1,5 @@
 {
-  "timestamp": "2026-03-21T18:28:58.708797+00:00",
+  "timestamp": "2026-03-25T19:50:59.174508+00:00",
   "categories": {
     "permission": {
       "tests": [
@@ -8,7 +8,7 @@
           "category": "permission",
           "description": "Gmail Agent should have read access",
           "agent": "gmail_agent",
-          "scope": "gmail.readonly",
+          "scope": "read_emails",
           "expected": true,
           "actual": true,
           "passed": true
@@ -18,7 +18,7 @@
           "category": "permission",
           "description": "Gmail Agent should have send access",
           "agent": "gmail_agent",
-          "scope": "gmail.send",
+          "scope": "send_emails",
           "expected": true,
           "actual": true,
           "passed": true
@@ -28,7 +28,7 @@
           "category": "permission",
           "description": "Gmail Agent should NOT have Drive access",
           "agent": "gmail_agent",
-          "scope": "drive.readonly",
+          "scope": "list_files",
           "expected": false,
           "actual": false,
           "passed": true
@@ -38,7 +38,7 @@
           "category": "permission",
           "description": "Calendar Agent should NOT have GitHub access",
           "agent": "calendar_agent",
-          "scope": "repo",
+          "scope": "list_repos",
           "expected": false,
           "actual": false,
           "passed": true
@@ -48,7 +48,7 @@
           "category": "permission",
           "description": "Drive Agent should have read access",
           "agent": "drive_agent",
-          "scope": "drive.readonly",
+          "scope": "list_files",
           "expected": true,
           "actual": true,
           "passed": true
@@ -58,7 +58,7 @@
           "category": "permission",
           "description": "GitHub Agent should have repo access",
           "agent": "github_agent",
-          "scope": "repo",
+          "scope": "list_repos",
           "expected": true,
           "actual": true,
           "passed": true
@@ -75,7 +75,7 @@
           "category": "ciba",
           "description": "Sending email should require CIBA approval",
           "agent": "gmail_agent",
-          "action": "send_email",
+          "action": "send_emails",
           "expected_high_stakes": true,
           "actual_high_stakes": true,
           "passed": true
@@ -95,7 +95,7 @@
           "category": "ciba",
           "description": "Deleting a file should require CIBA approval",
           "agent": "drive_agent",
-          "action": "delete_file",
+          "action": "delete_files",
           "expected_high_stakes": true,
           "actual_high_stakes": true,
           "passed": true
@@ -105,7 +105,7 @@
           "category": "ciba",
           "description": "Creating an event should require CIBA approval",
           "agent": "calendar_agent",
-          "action": "create_event",
+          "action": "create_events",
           "expected_high_stakes": true,
           "actual_high_stakes": true,
           "passed": true
@@ -115,7 +115,7 @@
           "category": "ciba",
           "description": "Posting a GitHub comment should require CIBA",
           "agent": "github_agent",
-          "action": "create_comment",
+          "action": "post_comments",
           "expected_high_stakes": true,
           "actual_high_stakes": true,
           "passed": true
@@ -221,7 +221,7 @@
           "agent_correct": true,
           "action_correct": true,
           "passed": true,
-          "latency_ms": 1087.9
+          "latency_ms": 819.8
         },
         {
           "id": "route_gmail_search",
@@ -234,7 +234,7 @@
           "agent_correct": true,
           "action_correct": true,
           "passed": true,
-          "latency_ms": 1515.2
+          "latency_ms": 955.0
         },
         {
           "id": "route_gmail_send",
@@ -247,7 +247,7 @@
           "agent_correct": true,
           "action_correct": true,
           "passed": true,
-          "latency_ms": 1167.4
+          "latency_ms": 697.9
         },
         {
           "id": "route_calendar_list",
@@ -260,7 +260,7 @@
           "agent_correct": true,
           "action_correct": true,
           "passed": true,
-          "latency_ms": 674.8
+          "latency_ms": 820.5
         },
         {
           "id": "route_drive_list",
@@ -273,7 +273,7 @@
           "agent_correct": true,
           "action_correct": true,
           "passed": true,
-          "latency_ms": 1308.9
+          "latency_ms": 809.0
         },
         {
           "id": "route_drive_search",
@@ -286,7 +286,7 @@
           "agent_correct": true,
           "action_correct": true,
           "passed": true,
-          "latency_ms": 740.4
+          "latency_ms": 639.7
         },
         {
           "id": "route_github_repos",
@@ -299,7 +299,7 @@
           "agent_correct": true,
           "action_correct": true,
           "passed": true,
-          "latency_ms": 642.5
+          "latency_ms": 1100.9
         },
         {
           "id": "route_github_issues",
@@ -312,7 +312,7 @@
           "agent_correct": true,
           "action_correct": true,
           "passed": true,
-          "latency_ms": 745.7
+          "latency_ms": 872.8
         },
         {
           "id": "route_none",
@@ -325,7 +325,7 @@
           "agent_correct": true,
           "action_correct": true,
           "passed": true,
-          "latency_ms": 761.6
+          "latency_ms": 876.9
         },
         {
           "id": "route_calendar_create",
@@ -338,7 +338,7 @@
           "agent_correct": true,
           "action_correct": true,
           "passed": true,
-          "latency_ms": 1095.8
+          "latency_ms": 1221.5
         }
       ],
       "total": 10,
