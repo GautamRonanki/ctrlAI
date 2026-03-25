@@ -12,6 +12,7 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
+from core.logger import log_audit
 from datetime import datetime
 
 # Page config
@@ -52,6 +53,11 @@ st.markdown(
         font-size: 0.88em;
         color: #555;
         margin-bottom: 3px;
+    }
+    button[data-testid="stButton"][key="suspend_all_agents"],
+    div[data-testid="stButton"]:has(button[kind="primary"]) button {
+        background-color: #c62828 !important;
+        color: white !important;
     }
     .status-active {
         color: #2e7d32;
@@ -224,7 +230,105 @@ st.divider()
 # ============================================================
 # Agent Registry (with inline permission management)
 # ============================================================
-st.header("🤖 Agent Registry")
+# Check if all agents are currently suspended
+all_suspended = all(a.status != AgentStatus.ACTIVE for a in get_all_agents().values())
+
+reg_header_col, reg_btn_col = st.columns([8, 2])
+with reg_header_col:
+    st.header("🤖 Agent Registry")
+with reg_btn_col:
+    st.markdown("<br>", unsafe_allow_html=True)
+    if all_suspended:
+        activate_all_clicked = st.button(
+            "🟢 Activate All Agents",
+            key="activate_all_agents",
+            use_container_width=True,
+        )
+        suspend_all_clicked = False
+    else:
+        suspend_all_clicked = st.button(
+            "🛑 Suspend All Agents",
+            key="suspend_all_agents",
+            use_container_width=True,
+        )
+        activate_all_clicked = False
+
+if suspend_all_clicked:
+    st.session_state["show_suspend_all_confirm"] = True
+
+if activate_all_clicked:
+    st.session_state["show_activate_all_confirm"] = True
+
+if st.session_state.get("show_suspend_all_confirm"):
+
+    @st.dialog("⚠️ Suspend All Agents")
+    def confirm_suspend_all():
+        st.warning(
+            "This will suspend **all agents immediately**. "
+            "No agent will be able to access any service or execute any action "
+            "until reactivated by an administrator."
+        )
+        st.markdown("")
+        col_cancel, col_suspend = st.columns(2)
+        with col_cancel:
+            if st.button("Cancel", key="cancel_suspend_all", use_container_width=True):
+                st.session_state["show_suspend_all_confirm"] = False
+                st.rerun()
+        with col_suspend:
+            if st.button(
+                "🛑 Suspend All",
+                key="confirm_suspend_all",
+                use_container_width=True,
+                type="primary",
+            ):
+                for agent_name in get_all_agents():
+                    suspend_agent(agent_name)
+                st.session_state["show_suspend_all_confirm"] = False
+                log_audit(
+                    "admin_action",
+                    "admin",
+                    "suspend_all_agents",
+                    "success",
+                    {"agents_suspended": len(get_all_agents())},
+                )
+                st.rerun()
+
+    confirm_suspend_all()
+
+if st.session_state.get("show_activate_all_confirm"):
+
+    @st.dialog("🟢 Activate All Agents")
+    def confirm_activate_all():
+        st.info(
+            "This will reactivate **all agents immediately**. "
+            "Every agent will regain access to its permitted services and scopes."
+        )
+        st.markdown("")
+        col_cancel, col_activate = st.columns(2)
+        with col_cancel:
+            if st.button("Cancel", key="cancel_activate_all", use_container_width=True):
+                st.session_state["show_activate_all_confirm"] = False
+                st.rerun()
+        with col_activate:
+            if st.button(
+                "🟢 Activate All",
+                key="confirm_activate_all",
+                use_container_width=True,
+                type="primary",
+            ):
+                for agent_name in get_all_agents():
+                    activate_agent(agent_name)
+                st.session_state["show_activate_all_confirm"] = False
+                log_audit(
+                    "admin_action",
+                    "admin",
+                    "activate_all_agents",
+                    "success",
+                    {"agents_activated": len(get_all_agents())},
+                )
+                st.rerun()
+
+    confirm_activate_all()
 
 agents = get_all_agents()
 
