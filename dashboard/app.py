@@ -664,11 +664,38 @@ def show_inter_agent_dialog(requester: str, target: str):
 
     new_actions = []
     target_actions = IA_ACTIONS_BY_TARGET.get(target, all_ia_actions)
+    tgt_agent_obj = get_all_agents().get(target)
+    tgt_scopes = tgt_agent_obj.permitted_scopes if tgt_agent_obj else []
+
+    # Map inter-agent actions to the target agent's required scopes
+    IA_ACTION_TO_SCOPE = {
+        "read_email_context": "read_emails",
+        "send_email": "send_emails",
+        "send_alert_email": "send_emails",
+        "store_attachment": "create_files",
+        "delete_file": "delete_files",
+        "read_files": "read_files",
+        "check_availability": "list_events",
+        "create_event": "create_events",
+        "read_events": "read_events",
+        "read_issues": "read_issues",
+        "post_comments": "post_comments",
+        "read_repos": "read_repos",
+        "generate_reports": "generate_reports",
+    }
+
     for action in target_actions:
         label = IA_ACTION_LABELS.get(action, action)
         checked = action in current_actions
         if st.checkbox(label, value=checked, key=f"ia_{requester}_{target}_{action}"):
             new_actions.append(action)
+        # Show warning if target agent doesn't have the required scope
+        required_scope = IA_ACTION_TO_SCOPE.get(action)
+        if checked and required_scope and required_scope not in tgt_scopes:
+            scope_label = SCOPE_LABELS.get(required_scope, required_scope)
+            st.caption(
+                f"⚠️ {humanize(target)} currently has '{scope_label}' disabled - this action may fail at runtime."
+            )
 
     st.divider()
 
@@ -753,7 +780,7 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-st.caption("Click any cell below to manage the relationship between two agents.")
+# st.caption("Click any cell below to manage the relationship between two agents.")
 
 # Render clickable buttons below the table (hidden, triggered by JS)
 btn_cols_per_row = len(agent_name_list)

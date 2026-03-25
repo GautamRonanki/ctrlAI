@@ -26,6 +26,9 @@
     ],
     "stale_issue_monitor": [
       "read_issues"
+    ],
+    "security_report_agent": [
+      "generate_reports"
     ]
   },
   "github_agent": {
@@ -39,15 +42,22 @@
     ],
     "stale_issue_monitor": [
       "read_issues"
+    ],
+    "security_report_agent": [
+      "generate_reports"
     ]
   },
   "security_report_agent": {
     "gmail_agent": [
+      "read_email_context",
       "send_alert_email"
     ],
     "github_agent": [
       "read_issues",
       "post_comments"
+    ],
+    "drive_agent": [
+      "store_attachment"
     ]
   },
   "drive_agent": {
@@ -56,8 +66,7 @@
       "create_event"
     ],
     "gmail_agent": [
-      "read_email_context",
-      "send_email"
+      "read_email_context"
     ],
     "github_agent": [
       "post_comments"
