@@ -1,7 +1,7 @@
 """
 Token Service for ctrlAI.
 Retrieves third-party OAuth tokens via Auth0 Token Vault exchange.
-Agents call get_google_token/get_github_token — Token Vault handles the rest.
+Agents call get_google_token/get_github_token - Token Vault handles the rest.
 """
 
 import os
@@ -20,7 +20,7 @@ AUTH0_CLIENT_SECRET = os.getenv("AUTH0_CLIENT_SECRET")
 async def get_token_via_vault(refresh_token: str, connection: str) -> dict | None:
     """
     Exchange an Auth0 refresh token for an external provider's access token via Token Vault.
-    This is the production pattern — agents call this, never the Management API.
+    This is the production pattern - agents call this, never the Management API.
     """
     async with httpx.AsyncClient() as client:
         response = await client.post(

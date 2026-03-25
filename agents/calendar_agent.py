@@ -1,6 +1,6 @@
 """
 Google Calendar Agent for ctrlAI.
-Manages your Google Calendar — viewing your schedule and coordinating events on your behalf.
+Manages your Google Calendar - viewing your schedule and coordinating events on your behalf.
 Each function checks permissions before executing.
 """
 
@@ -83,7 +83,7 @@ async def create_event(
     agent_name: str = "calendar_agent",
 ) -> dict:
     """
-    Create a calendar event. HIGH-STAKES action — requires CIBA approval.
+    Create a calendar event. HIGH-STAKES action - requires CIBA approval.
     Caller must verify CIBA approval BEFORE calling this function.
 
     start_time and end_time should be ISO format (e.g., "2026-03-21T10:00:00-04:00")

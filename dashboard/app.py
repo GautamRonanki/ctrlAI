@@ -1,5 +1,5 @@
 """
-ctrlAI Admin Dashboard — Streamlit
+ctrlAI Admin Dashboard - Streamlit
 Identity and Permission Control Plane for AI Agents.
 """
 
@@ -17,7 +17,7 @@ from datetime import datetime
 
 # Page config
 st.set_page_config(
-    page_title="ctrlAI — Admin Dashboard",
+    page_title="ctrlAI - Admin Dashboard",
     page_icon="🛡️",
     layout="wide",
 )
@@ -434,9 +434,9 @@ def show_permission_dialog(agent_name: str):
         for k in all_keys
     ]
 
-    st.caption("**Permissions** — what this agent is allowed to do.")
+    st.caption("**Permissions** - what this agent is allowed to do.")
     st.caption(
-        "**Requires Approval (CIBA)** — actions that need your confirmation before executing."
+        "**Requires Approval (CIBA)** - actions that need your confirmation before executing."
     )
 
     edited = st.data_editor(
@@ -592,172 +592,260 @@ components.html(
 
 st.divider()
 # ============================================================
-# Inter-Agent Permission Matrix
+# Inter-Agent Permission Matrix (Interactive)
 # ============================================================
-st.header("🔗 Inter-Agent Permission Matrix")
 
-from core.permissions import get_permission_matrix
+from core.permissions import (
+    get_permission_matrix,
+    update_inter_agent_permission,
+    get_all_inter_agent_actions,
+)
+
+st.header("🔗 Inter-Agent Permission Matrix")
+st.caption(
+    "Click any cell to manage the relationship between two agents. "
+    "Enforced at runtime on every inter-agent communication."
+)
 
 matrix = get_permission_matrix()
-agent_names = list(agents.keys())
+agent_name_list = list(agents.keys())
+all_ia_actions = get_all_inter_agent_actions()
 
-matrix_data = []
-for requester in agent_names:
-    row = {"Agent": humanize(requester)}
-    for target in agent_names:
-        if requester == target:
-            row[humanize(target)] = "—"
-        elif requester in matrix and target in matrix[requester]:
-            actions = ", ".join(humanize_lower(a) for a in matrix[requester][target])
-            row[humanize(target)] = f"✅ {actions}"
+IA_ACTION_LABELS = {
+    "store_attachment": "Store attachment",
+    "check_availability": "Check availability",
+    "read_email_context": "Read email context",
+    "send_alert_email": "Send alert email",
+    "send_email": "Send email",
+    "delete_file": "Delete file",
+    "create_event": "Create event",
+    "read_files": "Read files",
+    "read_events": "Read events",
+    "read_issues": "Read issues",
+    "read_repos": "Read repositories",
+    "post_comments": "Post comments",
+    "generate_reports": "Generate reports",
+}
+
+# Actions available per TARGET agent (what can be requested FROM this agent)
+IA_ACTIONS_BY_TARGET = {
+    "gmail_agent": ["read_email_context", "send_email", "send_alert_email"],
+    "drive_agent": ["store_attachment", "delete_file", "read_files"],
+    "calendar_agent": ["check_availability", "create_event", "read_events"],
+    "github_agent": ["read_issues", "post_comments", "read_repos"],
+    "security_report_agent": ["generate_reports"],
+    "stale_issue_monitor": ["read_issues"],
+}
+
+
+@st.dialog("Inter-Agent Relationship", width="large")
+def show_inter_agent_dialog(requester: str, target: str):
+    current_actions = matrix.get(requester, {}).get(target, [])
+    has_access = len(current_actions) > 0
+
+    # Header with arrow
+    st.markdown(f"### {humanize(requester)}  ➡️  {humanize(target)}")
+
+    req_agent = agents.get(requester)
+    tgt_agent = agents.get(target)
+    if req_agent and tgt_agent:
+        st.caption(f"**{humanize(requester)}:** {req_agent.description}")
+        st.caption(f"**{humanize(target)}:** {tgt_agent.description}")
+
+    st.divider()
+
+    if has_access:
+        st.success(f"✅ {humanize(requester)} has access to {humanize(target)}")
+    else:
+        st.error(f"❌ {humanize(requester)} is blocked from {humanize(target)}")
+
+    st.markdown("**Permitted Actions**")
+    st.caption("Toggle which actions this agent can request from the target agent.")
+
+    new_actions = []
+    target_actions = IA_ACTIONS_BY_TARGET.get(target, all_ia_actions)
+    for action in target_actions:
+        label = IA_ACTION_LABELS.get(action, action)
+        checked = action in current_actions
+        if st.checkbox(label, value=checked, key=f"ia_{requester}_{target}_{action}"):
+            new_actions.append(action)
+
+    st.divider()
+
+    # Test button
+    col_test, col_save = st.columns(2)
+    with col_test:
+        if current_actions:
+            if st.button(
+                f"🧪 Test All ({len(current_actions)} actions)",
+                key=f"ia_test_{requester}_{target}",
+                use_container_width=True,
+            ):
+                from core.inter_agent import execute_inter_agent_request
+
+                for test_action in current_actions:
+                    test_result = run_async(
+                        execute_inter_agent_request(
+                            requesting_agent=requester,
+                            target_agent=target,
+                            action=test_action,
+                        )
+                    )
+                    action_label = IA_ACTION_LABELS.get(test_action, test_action)
+                    if test_result["status"] == "allowed":
+                        st.success(f"✅ {action_label} - Allowed")
+                    else:
+                        st.error(f"🚫 {action_label} - Denied")
         else:
-            row[humanize(target)] = "❌ Blocked"
-    matrix_data.append(row)
+            st.info("No actions permitted - grant access to enable testing")
 
-df_matrix = pd.DataFrame(matrix_data).set_index("Agent")
-st.dataframe(df_matrix, use_container_width=True)
-
-st.caption(
-    "Each cell shows what the row agent can request from the column agent. "
-    "❌ Blocked = all requests denied. Enforced at runtime on every inter-agent communication."
-)
-
-st.divider()
-
-# ============================================================
-# Inter-Agent Demo Panel
-# ============================================================
-st.header("🧪 Inter-Agent Demo Panel")
-st.caption(
-    "Click any scenario to execute it live. Results are logged to the audit trail in real time."
-)
-
-from core.inter_agent import (
-    get_demo_scenarios,
-    execute_inter_agent_request,
-    format_inter_agent_result,
-)
-
-scenarios = get_demo_scenarios()
-
-allowed_scenarios = [s for s in scenarios if s["expected"] == "allowed"]
-denied_scenarios = [s for s in scenarios if s["expected"] == "denied"]
-
-col_allowed, col_denied = st.columns(2)
-
-with col_allowed:
-    st.subheader("✅ Allowed Requests")
-    for scenario in allowed_scenarios:
-        label = f"✅ {humanize(scenario['requesting_agent'])} → {humanize(scenario['target_agent'])}: {humanize_lower(scenario['action'])}"
+    with col_save:
         if st.button(
-            label,
-            key=f"demo_{scenario['requesting_agent']}_{scenario['target_agent']}_{scenario['action']}",
+            "💾 Save Changes",
+            key=f"ia_save_{requester}_{target}",
+            use_container_width=True,
         ):
-            with st.spinner("Executing..."):
-                result = run_async(
-                    execute_inter_agent_request(
-                        requesting_agent=scenario["requesting_agent"],
-                        target_agent=scenario["target_agent"],
-                        action=scenario["action"],
-                    )
+            update_inter_agent_permission(requester, target, new_actions)
+            st.rerun()
+
+
+# Build matrix as an HTML table with clickable cells
+matrix_html_rows = []
+# Header row
+header_cells = '<th style="padding:10px 8px; text-align:left; background:#f0f2f6; border:1px solid #ddd; font-size:0.85em;">Agent</th>'
+for name in agent_name_list:
+    header_cells += f'<th style="padding:10px 6px; text-align:center; background:#f0f2f6; border:1px solid #ddd; font-size:0.8em; min-width:80px;">{humanize(name)}</th>'
+matrix_html_rows.append(f"<tr>{header_cells}</tr>")
+
+# Data rows
+for requester in agent_name_list:
+    cells = f'<td style="padding:10px 8px; font-weight:600; background:#fafafa; border:1px solid #ddd; font-size:0.85em;">{humanize(requester)}</td>'
+    for target in agent_name_list:
+        if requester == target:
+            cells += '<td style="padding:8px; text-align:center; border:1px solid #ddd; color:#999;">-</td>'
+        else:
+            has_access = (
+                requester in matrix
+                and target in matrix[requester]
+                and len(matrix[requester][target]) > 0
+            )
+            if has_access:
+                action_count = len(matrix[requester][target])
+                cells += (
+                    f'<td style="padding:8px; text-align:center; border:1px solid #ddd; background:#e8f5e9; cursor:pointer;" '
+                    f'title="Click to manage">'
+                    f'✅ <span style="font-size:0.75em; color:#555;">{action_count} action{"s" if action_count > 1 else ""}</span>'
+                    f"</td>"
                 )
-                formatted = format_inter_agent_result(result)
-                st.success(formatted)
-
-with col_denied:
-    st.subheader("🚫 Denied Requests")
-    for scenario in denied_scenarios:
-        label = f"🚫 {humanize(scenario['requesting_agent'])} → {humanize(scenario['target_agent'])}: {humanize_lower(scenario['action'])}"
-        if st.button(
-            label,
-            key=f"demo_{scenario['requesting_agent']}_{scenario['target_agent']}_{scenario['action']}",
-        ):
-            with st.spinner("Executing..."):
-                result = run_async(
-                    execute_inter_agent_request(
-                        requesting_agent=scenario["requesting_agent"],
-                        target_agent=scenario["target_agent"],
-                        action=scenario["action"],
-                    )
+            else:
+                cells += (
+                    '<td style="padding:8px; text-align:center; border:1px solid #ddd; background:#ffebee; cursor:pointer;" '
+                    'title="Click to manage">'
+                    '❌ <span style="font-size:0.75em; color:#999;">blocked</span>'
+                    "</td>"
                 )
-                formatted = format_inter_agent_result(result)
-                st.error(formatted)
-
-st.divider()
-
-# ============================================================
-# Orchestrator Execution Flow
-# ============================================================
-st.header("🔄 Orchestrator Execution Flow")
-st.caption(
-    "Every request flows through this LangGraph state machine. Each node enforces a governance check."
-)
+    matrix_html_rows.append(f"<tr>{cells}</tr>")
 
 st.markdown(
-    """
-<div class="flow-container">
-    <div class="flow-node">
-        <div class="flow-node-label">Router</div>
-        <div class="flow-node-desc">LLM picks the<br>right agent</div>
-    </div>
-    <div class="flow-arrow">→</div>
-    <div class="flow-node">
-        <div class="flow-node-label">Permission Gate</div>
-        <div class="flow-node-desc">Scope & status<br>check</div>
-        <div class="flow-deny">↓ denied → blocked</div>
-    </div>
-    <div class="flow-arrow">→</div>
-    <div class="flow-node">
-        <div class="flow-node-label">Token Retrieval</div>
-        <div class="flow-node-desc">Token Vault<br>exchange</div>
-        <div class="flow-deny">↓ failed → error</div>
-    </div>
-    <div class="flow-arrow">→</div>
-    <div class="flow-node">
-        <div class="flow-node-label">CIBA Checkpoint</div>
-        <div class="flow-node-desc">Guardian push<br>approval</div>
-        <div class="flow-deny">↓ denied → blocked</div>
-    </div>
-    <div class="flow-arrow">→</div>
-    <div class="flow-node">
-        <div class="flow-node-label">Agent Executor</div>
-        <div class="flow-node-desc">Calls the<br>service API</div>
-    </div>
-    <div class="flow-arrow">→</div>
-    <div class="flow-node">
-        <div class="flow-node-label">Response</div>
-        <div class="flow-node-desc">Formatted result<br>to user</div>
-    </div>
-</div>
-""",
+    f"""<table style="width:100%; border-collapse:collapse; border-radius:3px; overflow:hidden;">
+    {"".join(matrix_html_rows)}
+    </table>""",
     unsafe_allow_html=True,
 )
 
-# Recent orchestrator traces
-orchestrator_entries = [
-    e for e in entries if e["event_type"] == "orchestrator_complete"
-]
-if orchestrator_entries:
-    st.subheader("Recent Executions")
-    for entry in reversed(orchestrator_entries[-5:]):
-        details = entry.get("details", {})
-        steps_count = details.get("steps_count", 0)
-        status_icon = "✅" if entry["status"] == "success" else "❌"
-        agent_display = humanize(entry["agent_name"])
-        action_display = humanize_lower(entry["action"])
-        st.markdown(
-            f"{status_icon} **{agent_display}** — {action_display} — "
-            f"{steps_count} steps — {entry['timestamp'][:19]}"
-        )
+st.caption("Click any cell below to manage the relationship between two agents.")
+
+# Render clickable buttons below the table (hidden, triggered by JS)
+btn_cols_per_row = len(agent_name_list)
+for requester in agent_name_list:
+    row_cols = st.columns(btn_cols_per_row + 1)
+    with row_cols[0]:
+        st.empty()
+    for j, target in enumerate(agent_name_list):
+        with row_cols[j + 1]:
+            if requester != target:
+                if st.button(
+                    "•", key=f"matrix_{requester}_{target}", use_container_width=True
+                ):
+                    show_inter_agent_dialog(requester, target)
+
+# JS to hide the button rows and wire table cell clicks to them
+components.html(
+    """
+    <script>
+    (function wireMatrixClicks() {
+        const doc = window.parent.document;
+        let debounce;
+
+        function wire() {
+            // Find all matrix buttons (⚙️ buttons with key starting with matrix_)
+            const allBtns = Array.from(doc.querySelectorAll('button'));
+            const matrixBtns = allBtns.filter(b => {
+                const key = b.closest('[data-testid="stButton"]')?.parentElement?.querySelector('button')?.getAttribute('kind');
+                return b.textContent.trim() === '⚙️' &&
+                       b.closest('[data-testid="stVerticalBlock"]');
+            });
+
+            // Find all ⚙️ buttons that are matrix buttons (after the table)
+            const gearBtns = allBtns.filter(b => b.textContent.trim() === '•');
+
+            // Hide the button containers
+            gearBtns.forEach(btn => {
+                const container = btn.closest('[data-testid="stHorizontalBlock"]');
+                if (container) {
+                    container.style.height = '0';
+                    container.style.overflow = 'hidden';
+                    container.style.padding = '0';
+                    container.style.margin = '0';
+                }
+            });
+
+            // Wire table cells to buttons
+            const table = doc.querySelector('table');
+            if (!table) return;
+
+            const rows = table.querySelectorAll('tr');
+            let btnIndex = 0;
+
+            for (let i = 1; i < rows.length; i++) {
+                const cells = rows[i].querySelectorAll('td');
+                for (let j = 1; j < cells.length; j++) {
+                    if (cells[j].textContent.trim() === '-') continue;
+                    const btn = gearBtns[btnIndex];
+                    if (btn) {
+                        cells[j].style.cursor = 'pointer';
+                        cells[j].onclick = () => btn.click();
+                        cells[j].onmouseover = () => { cells[j].style.opacity = '0.7'; };
+                        cells[j].onmouseout = () => { cells[j].style.opacity = '1'; };
+                    }
+                    btnIndex++;
+                }
+            }
+        }
+
+        const observer = new MutationObserver(() => {
+            clearTimeout(debounce);
+            debounce = setTimeout(wire, 150);
+        });
+        observer.observe(doc.body, { childList: true, subtree: true });
+        wire();
+        setTimeout(wire, 300);
+        setTimeout(wire, 800);
+    })();
+    </script>
+    """,
+    height=0,
+)
 
 st.divider()
+
 
 # ============================================================
 # Autonomous Security Report Agent
 # ============================================================
 st.header("🔒 Security Report Agent")
 st.caption(
-    "Autonomous agent — monitors the audit trail and alerts on security violations. Not triggered by employees."
+    "Autonomous agent - monitors the audit trail and alerts on security violations. Not triggered by employees."
 )
 
 from agents.security_report_agent import generate_security_report, send_alert_email
@@ -809,7 +897,7 @@ if run_report or run_and_alert:
         # Send alert email if critical and user clicked Run & Alert
         if run_and_alert and report_result.get("has_critical"):
             st.warning(
-                "⚠️ Critical issues detected — sending alert email via Gmail Agent..."
+                "⚠️ Critical issues detected - sending alert email via Gmail Agent..."
             )
             refresh_token = None
             token_store_path = (
@@ -849,18 +937,18 @@ if run_report or run_and_alert:
                     "❌ No refresh token available. Log in via the web dashboard first."
                 )
         elif run_and_alert and not report_result.get("has_critical"):
-            st.info("✅ No critical issues found — no alert email needed.")
+            st.info("✅ No critical issues found - no alert email needed.")
     else:
         st.error(f"❌ Error: {report_result.get('reason', 'Unknown error')}")
 
 st.divider()
 
 # ============================================================
-# Stale Issue Monitor — Autonomous OAuth Agent
+# Stale Issue Monitor - Autonomous OAuth Agent
 # ============================================================
 st.header("🔍 Stale Issue Monitor")
 st.caption(
-    "Autonomous OAuth agent — retrieves its own GitHub token from Token Vault, "
+    "Autonomous OAuth agent - retrieves its own GitHub token from Token Vault, "
     "monitors repos for stale issues, and comments/labels with CIBA approval."
 )
 
@@ -964,36 +1052,36 @@ if "sim_result" in st.session_state:
             st.subheader("🔴 2+ Weeks Inactive")
             for issue in categories["two_plus_weeks"]:
                 st.markdown(
-                    f"  • **#{issue['number']}** — {issue['title']} "
-                    f"({issue['days_inactive']} days) — [{issue['author']}]({issue['url']})"
+                    f"  • **#{issue['number']}** - {issue['title']} "
+                    f"({issue['days_inactive']} days) - [{issue['author']}]({issue['url']})"
                 )
 
         if categories.get("two_weeks"):
             st.subheader("🟠 2 Weeks Inactive")
             for issue in categories["two_weeks"]:
                 st.markdown(
-                    f"  • **#{issue['number']}** — {issue['title']} "
-                    f"({issue['days_inactive']} days) — [{issue['author']}]({issue['url']})"
+                    f"  • **#{issue['number']}** - {issue['title']} "
+                    f"({issue['days_inactive']} days) - [{issue['author']}]({issue['url']})"
                 )
 
         if categories.get("one_to_two_weeks"):
             st.subheader("🟡 1-2 Weeks Inactive")
             for issue in categories["one_to_two_weeks"]:
                 st.markdown(
-                    f"  • **#{issue['number']}** — {issue['title']} "
-                    f"({issue['days_inactive']} days) — [{issue['author']}]({issue['url']})"
+                    f"  • **#{issue['number']}** - {issue['title']} "
+                    f"({issue['days_inactive']} days) - [{issue['author']}]({issue['url']})"
                 )
 
         if result.get("actions_taken"):
             st.subheader("✅ Actions Taken")
             for action in result["actions_taken"]:
-                st.markdown(f"  ✅ Issue #{action['issue']} — {action['action']}")
+                st.markdown(f"  ✅ Issue #{action['issue']} - {action['action']}")
 
         if result.get("actions_blocked"):
             st.subheader("❌ Actions Blocked")
             for action in result["actions_blocked"]:
                 st.markdown(
-                    f"  ❌ Issue #{action['issue']} — {action['action']}: {action['error']}"
+                    f"  ❌ Issue #{action['issue']} - {action['action']}: {action['error']}"
                 )
 st.divider()
 
@@ -1044,7 +1132,7 @@ else:
         st.markdown("<br>", unsafe_allow_html=True)
         st.button("🧹 Clear", on_click=clear_filters)
 
-    # Apply filters — show all if no filters selected
+    # Apply filters - show all if no filters selected
     filtered = entries
     if selected_types:
         filtered = [e for e in filtered if e["event_type"] in selected_types]
@@ -1103,29 +1191,6 @@ else:
 
     st.divider()
 
-    # CIBA Events Detail
-    ciba_events = [e for e in entries if e["event_type"] == "ciba"]
-    if ciba_events:
-        st.subheader("🔐 CIBA Approval History")
-        for event in reversed(ciba_events[-10:]):
-            status = event["status"]
-            icon = {
-                "requested": "🔔",
-                "pending": "⏳",
-                "approved": "✅",
-                "denied": "❌",
-                "expired": "⏰",
-                "timeout": "⏰",
-                "requesting_approval": "🔔",
-            }.get(status, "❓")
-            agent_display = humanize(event["agent_name"])
-            action_display = humanize_lower(event["action"])
-            st.markdown(
-                f"{icon} **{agent_display}** — {action_display} — "
-                f"**{humanize(status)}** at {event['timestamp'][:19]}"
-            )
-
-st.divider()
 
 # ============================================================
 # Evaluation Results
@@ -1252,5 +1317,5 @@ with col_clear:
             st.rerun()
 
 st.caption(
-    "ctrlAI — Identity and Permission Control Plane for AI Agents • Authorized to Act Hackathon • Auth0 Token Vault"
+    "ctrlAI - Identity and Permission Control Plane for AI Agents • Authorized to Act Hackathon • Auth0 Token Vault"
 )

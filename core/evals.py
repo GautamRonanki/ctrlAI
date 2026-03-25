@@ -1,5 +1,5 @@
 """
-ctrlAI — Evaluation System
+ctrlAI - Evaluation System
 ============================
 Lightweight eval infrastructure that validates the orchestrator, permissions,
 CIBA, and inter-agent matrix are working correctly.

@@ -1,6 +1,6 @@
 """
 GitHub Agent for ctrlAI.
-Manages your GitHub workflow — monitoring repositories, issues, and code activity.
+Manages your GitHub workflow - monitoring repositories, issues, and code activity.
 Each function checks permissions before executing.
 """
 
@@ -119,7 +119,7 @@ async def create_comment(
     agent_name: str = "github_agent",
 ) -> dict:
     """
-    Create a comment on a GitHub issue. HIGH-STAKES action — requires CIBA approval.
+    Create a comment on a GitHub issue. HIGH-STAKES action - requires CIBA approval.
     Caller must verify CIBA approval BEFORE calling this function.
     """
     if not check_scope_permission(agent_name, "post_comments"):

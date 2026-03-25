@@ -33,14 +33,19 @@ async def request_approval(
 ) -> dict:
     """
     Trigger a CIBA approval request. Returns the auth_req_id for polling.
-    
+
     Args:
         user_id: Auth0 user ID (e.g., "auth0|abc123")
         agent_name: Which agent is requesting
         action: What action needs approval
         binding_message: Human-readable message shown on Guardian
     """
-    log_ciba_event(agent_name, action, "requested", {"user_id": user_id, "message": binding_message})
+    log_ciba_event(
+        agent_name,
+        action,
+        "requested",
+        {"user_id": user_id, "message": binding_message},
+    )
 
     async with httpx.AsyncClient() as client:
         response = await client.post(
@@ -62,9 +67,11 @@ async def request_approval(
 
     data = response.json()
     auth_req_id = data.get("auth_req_id")
-    
+
     log_ciba_event(agent_name, action, "pending", {"auth_req_id": auth_req_id})
-    logger.info(f"CIBA request sent. auth_req_id={auth_req_id}. Waiting for user approval on Guardian...")
+    logger.info(
+        f"CIBA request sent. auth_req_id={auth_req_id}. Waiting for user approval on Guardian..."
+    )
 
     return {"status": "pending", "auth_req_id": auth_req_id}
 
@@ -102,11 +109,11 @@ async def poll_for_approval(auth_req_id: str, agent_name: str, action: str) -> d
         error = data.get("error")
 
         if error == "authorization_pending":
-            # Still waiting — continue polling
+            # Still waiting - continue polling
             continue
 
         if error == "slow_down":
-            # Polling too fast — wait longer
+            # Polling too fast - wait longer
             await asyncio.sleep(CIBA_POLL_INTERVAL)
             continue
 
@@ -142,7 +149,9 @@ async def request_and_wait_for_approval(
     Full CIBA flow: request approval and wait for result.
     Returns {"status": "approved"} or {"status": "denied"/"expired"/"timeout"/"error"}.
     """
-    request_result = await request_approval(user_id, agent_name, action, binding_message)
+    request_result = await request_approval(
+        user_id, agent_name, action, binding_message
+    )
 
     if request_result["status"] != "pending":
         return request_result

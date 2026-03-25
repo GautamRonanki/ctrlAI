@@ -1,10 +1,10 @@
 """
-ctrlAI — Inter-Agent Communication Engine
+ctrlAI - Inter-Agent Communication Engine
 ==========================================
 Handles agent-to-agent requests with full permission matrix enforcement.
 Every inter-agent request is checked, logged, and either allowed or blocked.
 
-This is the core differentiator of ctrlAI — no other product governs
+This is the core differentiator of ctrlAI - no other product governs
 what agents can request from each other at this level.
 """
 
@@ -58,7 +58,7 @@ async def execute_inter_agent_request(
 ) -> dict:
     """
     Execute an inter-agent request with full permission enforcement.
-    
+
     Returns:
         {
             "status": "allowed" | "denied" | "error",
@@ -74,8 +74,11 @@ async def execute_inter_agent_request(
     # Step 1: Check if both agents exist and are active
     if not is_agent_active(requesting_agent):
         log_audit(
-            "inter_agent", requesting_agent, f"request:{target_agent}:{action}",
-            "denied", {"reason": "requesting agent not active"},
+            "inter_agent",
+            requesting_agent,
+            f"request:{target_agent}:{action}",
+            "denied",
+            {"reason": "requesting agent not active"},
         )
         return {
             "status": "denied",
@@ -88,15 +91,18 @@ async def execute_inter_agent_request(
 
     if not is_agent_active(target_agent):
         log_audit(
-            "inter_agent", requesting_agent, f"request:{target_agent}:{action}",
-            "denied", {"reason": "target agent not active"},
+            "inter_agent",
+            requesting_agent,
+            f"request:{target_agent}:{action}",
+            "denied",
+            {"reason": "target agent not active"},
         )
         return {
             "status": "denied",
             "requesting_agent": requesting_agent,
             "target_agent": target_agent,
             "action": action,
-            "reason": f"{target_agent} is not active — cannot receive requests",
+            "reason": f"{target_agent} is not active - cannot receive requests",
             "result": None,
         }
 
@@ -113,10 +119,13 @@ async def execute_inter_agent_request(
             "result": None,
         }
 
-    # Step 3: Permission granted — log and execute
+    # Step 3: Permission granted - log and execute
     log_audit(
-        "inter_agent_execution", requesting_agent, f"{target_agent}:{action}",
-        "executing", {"params": params},
+        "inter_agent_execution",
+        requesting_agent,
+        f"{target_agent}:{action}",
+        "executing",
+        {"params": params},
     )
 
     # For the hackathon demo, we simulate the inter-agent action
@@ -135,8 +144,11 @@ async def execute_inter_agent_request(
     }
 
     log_audit(
-        "inter_agent_execution", requesting_agent, f"{target_agent}:{action}",
-        "success", {"result": "executed"},
+        "inter_agent_execution",
+        requesting_agent,
+        f"{target_agent}:{action}",
+        "success",
+        {"result": "executed"},
     )
 
     return result

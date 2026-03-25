@@ -1,6 +1,6 @@
 """
 Gmail Agent for ctrlAI.
-Manages your Gmail inbox — reading, composing, and organizing emails on your behalf.
+Manages your Gmail inbox - reading, composing, and organizing emails on your behalf.
 Each function checks permissions before executing.
 """
 
@@ -72,7 +72,7 @@ async def send_email(
     agent_name: str = "gmail_agent",
 ) -> dict:
     """
-    Send an email. This is a HIGH-STAKES action — requires CIBA approval.
+    Send an email. This is a HIGH-STAKES action - requires CIBA approval.
     The caller must verify CIBA approval BEFORE calling this function.
     """
     if not check_scope_permission(agent_name, "send_emails"):

@@ -34,34 +34,34 @@ class AgentIdentity:
 
 
 # ============================================================
-# Default Agent Registry — the baseline configuration
+# Default Agent Registry - the baseline configuration
 # ============================================================
 
 DEFAULT_AGENT_REGISTRY: dict[str, dict] = {
     "gmail_agent": {
         "name": "gmail_agent",
-        "description": "Manages your Gmail inbox — reading, composing, and organizing emails on your behalf",
+        "description": "Manages your Gmail inbox - reading, composing, and organizing emails on your behalf",
         "oauth_provider": "google",
         "permitted_scopes": ["gmail.readonly", "gmail.send"],
         "high_stakes_actions": ["send_email"],
     },
     "drive_agent": {
         "name": "drive_agent",
-        "description": "Manages your Google Drive — accessing, organizing, and maintaining your files and documents",
+        "description": "Manages your Google Drive - accessing, organizing, and maintaining your files and documents",
         "oauth_provider": "google",
         "permitted_scopes": ["drive.readonly", "drive.file"],
         "high_stakes_actions": ["delete_file"],
     },
     "calendar_agent": {
         "name": "calendar_agent",
-        "description": "Manages your Google Calendar — viewing your schedule and coordinating events on your behalf",
+        "description": "Manages your Google Calendar - viewing your schedule and coordinating events on your behalf",
         "oauth_provider": "google",
         "permitted_scopes": ["calendar.events.readonly", "calendar.events"],
         "high_stakes_actions": ["create_event"],
     },
     "github_agent": {
         "name": "github_agent",
-        "description": "Manages your GitHub workflow — monitoring repositories, issues, and code activity",
+        "description": "Manages your GitHub workflow - monitoring repositories, issues, and code activity",
         "oauth_provider": "github",
         "permitted_scopes": ["repo", "read:user"],
         "high_stakes_actions": ["create_comment"],
@@ -85,7 +85,7 @@ AVAILABLE_HIGH_STAKES = {
 }
 
 # ============================================================
-# In-memory Agent Registry — built from defaults + overrides
+# In-memory Agent Registry - built from defaults + overrides
 # ============================================================
 
 AGENT_REGISTRY: dict[str, AgentIdentity] = {}
@@ -178,7 +178,7 @@ _apply_all_overrides()
 
 
 # ============================================================
-# Public API — Status
+# Public API - Status
 # ============================================================
 
 
@@ -195,7 +195,7 @@ def is_agent_active(name: str) -> bool:
 
 
 def suspend_agent(agent_name: str) -> bool:
-    """Suspend an agent — takes effect immediately on next request in ALL processes."""
+    """Suspend an agent - takes effect immediately on next request in ALL processes."""
     agent = AGENT_REGISTRY.get(agent_name)
     if agent is None:
         return False
@@ -210,7 +210,7 @@ def suspend_agent(agent_name: str) -> bool:
 
 
 def activate_agent(agent_name: str) -> bool:
-    """Reactivate a suspended agent — takes effect immediately in ALL processes."""
+    """Reactivate a suspended agent - takes effect immediately in ALL processes."""
     agent = AGENT_REGISTRY.get(agent_name)
     if agent is None:
         return False
@@ -225,7 +225,7 @@ def activate_agent(agent_name: str) -> bool:
 
 
 # ============================================================
-# Public API — Scopes
+# Public API - Scopes
 # ============================================================
 
 
@@ -286,7 +286,7 @@ def update_scopes(agent_name: str, new_scopes: list[str]) -> bool:
 
 
 # ============================================================
-# Public API — High-Stakes Actions
+# Public API - High-Stakes Actions
 # ============================================================
 
 
@@ -318,7 +318,7 @@ def update_high_stakes(agent_name: str, new_actions: list[str]) -> bool:
 
 
 # ============================================================
-# Public API — Permission Checks
+# Public API - Permission Checks
 # ============================================================
 
 
@@ -365,7 +365,7 @@ def check_inter_agent_permission(
 
 
 # ============================================================
-# Public API — Registry Access
+# Public API - Registry Access
 # ============================================================
 
 

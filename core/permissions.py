@@ -38,13 +38,13 @@ class AgentIdentity:
 
 
 # ============================================================
-# Default Agent Registry — the baseline configuration
+# Default Agent Registry - the baseline configuration
 # ============================================================
 
 DEFAULT_AGENT_REGISTRY: dict[str, dict] = {
     "gmail_agent": {
         "name": "gmail_agent",
-        "description": "Manages your Gmail inbox — reading, composing, and organizing emails on your behalf",
+        "description": "Manages your Gmail inbox - reading, composing, and organizing emails on your behalf",
         "oauth_provider": "google",
         "permitted_scopes": [
             "read_emails",
@@ -56,7 +56,7 @@ DEFAULT_AGENT_REGISTRY: dict[str, dict] = {
     },
     "drive_agent": {
         "name": "drive_agent",
-        "description": "Manages your Google Drive — accessing, organizing, and maintaining your files and documents",
+        "description": "Manages your Google Drive - accessing, organizing, and maintaining your files and documents",
         "oauth_provider": "google",
         "permitted_scopes": [
             "list_files",
@@ -69,7 +69,7 @@ DEFAULT_AGENT_REGISTRY: dict[str, dict] = {
     },
     "calendar_agent": {
         "name": "calendar_agent",
-        "description": "Manages your Google Calendar — viewing your schedule and coordinating events on your behalf",
+        "description": "Manages your Google Calendar - viewing your schedule and coordinating events on your behalf",
         "oauth_provider": "google",
         "permitted_scopes": [
             "list_events",
@@ -81,7 +81,7 @@ DEFAULT_AGENT_REGISTRY: dict[str, dict] = {
     },
     "github_agent": {
         "name": "github_agent",
-        "description": "Manages your GitHub workflow — monitoring repositories, issues, and code activity",
+        "description": "Manages your GitHub workflow - monitoring repositories, issues, and code activity",
         "oauth_provider": "github",
         "permitted_scopes": [
             "list_repos",
@@ -94,14 +94,14 @@ DEFAULT_AGENT_REGISTRY: dict[str, dict] = {
     },
     "security_report_agent": {
         "name": "security_report_agent",
-        "description": "Autonomous security monitor — analyzes agent activity and alerts administrators on policy violations",
+        "description": "Autonomous security monitor - analyzes agent activity and alerts administrators on policy violations",
         "oauth_provider": "internal",
         "permitted_scopes": ["read_audit_trail", "generate_reports"],
         "high_stakes_actions": [],
     },
     "stale_issue_monitor": {
         "name": "stale_issue_monitor",
-        "description": "Autonomous GitHub monitor — identifies inactive issues and keeps your project board healthy",
+        "description": "Autonomous GitHub monitor - identifies inactive issues and keeps your project board healthy",
         "oauth_provider": "github",
         "permitted_scopes": [
             "read_repos",
@@ -157,7 +157,7 @@ AVAILABLE_HIGH_STAKES = {
 }
 
 # ============================================================
-# In-memory Agent Registry — built from defaults + overrides
+# In-memory Agent Registry - built from defaults + overrides
 # ============================================================
 
 AGENT_REGISTRY: dict[str, AgentIdentity] = {}
@@ -208,6 +208,7 @@ CONFIG_DIR = Path(__file__).parent.parent / "config"
 STATUS_FILE = CONFIG_DIR / "agent_status.json"
 SCOPES_FILE = CONFIG_DIR / "agent_scopes.json"
 HIGH_STAKES_FILE = CONFIG_DIR / "agent_high_stakes.json"
+INTER_AGENT_FILE = CONFIG_DIR / "inter_agent_matrix.json"
 
 
 def _load_json(filepath: Path) -> dict:
@@ -252,7 +253,7 @@ def _apply_all_overrides():
 _apply_all_overrides()
 
 # ============================================================
-# Rate Limiting — Active Protection
+# Rate Limiting - Active Protection
 # ============================================================
 
 import time as _time
@@ -317,7 +318,7 @@ def get_rate_limit_status(agent_name: str) -> dict:
 
 
 # ============================================================
-# Public API — Status
+# Public API - Status
 # ============================================================
 
 
@@ -334,7 +335,7 @@ def is_agent_active(name: str) -> bool:
 
 
 def suspend_agent(agent_name: str) -> bool:
-    """Suspend an agent — takes effect immediately on next request in ALL processes."""
+    """Suspend an agent - takes effect immediately on next request in ALL processes."""
     agent = AGENT_REGISTRY.get(agent_name)
     if agent is None:
         return False
@@ -349,7 +350,7 @@ def suspend_agent(agent_name: str) -> bool:
 
 
 def activate_agent(agent_name: str) -> bool:
-    """Reactivate a suspended agent — takes effect immediately in ALL processes."""
+    """Reactivate a suspended agent - takes effect immediately in ALL processes."""
     agent = AGENT_REGISTRY.get(agent_name)
     if agent is None:
         return False
@@ -364,7 +365,7 @@ def activate_agent(agent_name: str) -> bool:
 
 
 # ============================================================
-# Public API — Scopes
+# Public API - Scopes
 # ============================================================
 
 
@@ -425,7 +426,7 @@ def update_scopes(agent_name: str, new_scopes: list[str]) -> bool:
 
 
 # ============================================================
-# Public API — High-Stakes Actions
+# Public API - High-Stakes Actions
 # ============================================================
 
 
@@ -457,7 +458,7 @@ def update_high_stakes(agent_name: str, new_actions: list[str]) -> bool:
 
 
 # ============================================================
-# Public API — Permission Checks
+# Public API - Permission Checks
 # ============================================================
 
 
@@ -478,7 +479,7 @@ def check_scope_permission(
         )
         return False
 
-    # Rate limit check — before scope check (system alerts can bypass)
+    # Rate limit check - before scope check (system alerts can bypass)
     if not _system_bypass_rate_limit and not _check_rate_limit(agent_name):
         log_permission_check(
             agent_name,
@@ -521,7 +522,8 @@ def check_inter_agent_permission(
     requesting_agent: str, target_agent: str, action: str
 ) -> bool:
     """Check if one agent is allowed to communicate with another."""
-    agent_permissions = INTER_AGENT_PERMISSIONS.get(requesting_agent, {})
+    matrix = get_permission_matrix()
+    agent_permissions = matrix.get(requesting_agent, {})
     allowed_actions = agent_permissions.get(target_agent, [])
     allowed = action in allowed_actions
     log_inter_agent(requesting_agent, target_agent, action, allowed)
@@ -529,7 +531,7 @@ def check_inter_agent_permission(
 
 
 # ============================================================
-# Public API — Registry Access
+# Public API - Registry Access
 # ============================================================
 
 
@@ -540,13 +542,57 @@ def get_all_agents() -> dict[str, AgentIdentity]:
 
 
 def get_permission_matrix() -> dict:
-    """Return the full inter-agent permission matrix."""
-    return INTER_AGENT_PERMISSIONS.copy()
+    """Return the full inter-agent permission matrix (with persisted overrides)."""
+    overrides = _load_json(INTER_AGENT_FILE)
+    if overrides:
+        return overrides
+    return {
+        k: {t: list(a) for t, a in v.items()}
+        for k, v in INTER_AGENT_PERMISSIONS.items()
+    }
+
+
+def update_inter_agent_permission(
+    requesting_agent: str, target_agent: str, actions: list[str]
+):
+    """Update the allowed actions between two agents. Persists to disk."""
+    matrix = get_permission_matrix()
+    if not actions:
+        # Remove the relationship
+        if requesting_agent in matrix and target_agent in matrix[requesting_agent]:
+            del matrix[requesting_agent][target_agent]
+            if not matrix[requesting_agent]:
+                del matrix[requesting_agent]
+    else:
+        if requesting_agent not in matrix:
+            matrix[requesting_agent] = {}
+        matrix[requesting_agent][target_agent] = actions
+    _save_json(INTER_AGENT_FILE, matrix)
+    log_audit(
+        "admin_action",
+        requesting_agent,
+        f"update_inter_agent:{target_agent}",
+        "success",
+        {"actions": actions},
+    )
+
+
+def get_all_inter_agent_actions() -> list[str]:
+    """Return all possible inter-agent action names."""
+    return [
+        "store_attachment",
+        "check_availability",
+        "read_email_context",
+        "send_alert_email",
+        "send_email",
+        "delete_file",
+        "create_event",
+    ]
 
 
 async def send_rate_limit_alert(agent_name: str, limit: int, window: int):
     """Send an email alert when an agent exceeds its rate limit.
-    Uses the inter-agent permission matrix — routes through Gmail Agent."""
+    Uses the inter-agent permission matrix - routes through Gmail Agent."""
     import os
 
     # Check inter-agent permission (security_report_agent → gmail_agent)
@@ -637,7 +683,7 @@ async def send_rate_limit_alert(agent_name: str, limit: int, window: int):
 
     msg = MIMEText(alert_body)
     msg["to"] = admin_email
-    msg["subject"] = f"⚠️ ctrlAI Rate Limit Alert — {agent_name}"
+    msg["subject"] = f"⚠️ ctrlAI Rate Limit Alert - {agent_name}"
     raw = base64.urlsafe_b64encode(msg.as_bytes()).decode()
 
     async with httpx.AsyncClient() as client:

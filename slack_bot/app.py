@@ -1,5 +1,5 @@
 """
-ctrlAI Slack Bot — Employee-facing interface.
+ctrlAI Slack Bot - Employee-facing interface.
 Now powered by the LangGraph Master Orchestrator with rich Slack Block Kit formatting.
 
 Inter-agent commands: "inter-agent: agent1 requests action from agent2"
@@ -256,7 +256,7 @@ JSON: {{"agent": "...", "action": "..."}}"""
         say(blocks=confirm_blocks, text="High-stakes action detected. Confirm?")
         return
 
-    # Not high-stakes — run directly
+    # Not high-stakes - run directly
     result = run_async(
         run_orchestrator(
             user_message=text,

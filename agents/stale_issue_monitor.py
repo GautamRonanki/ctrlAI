@@ -1,9 +1,9 @@
 """
-Stale Issue Monitor — Autonomous OAuth Agent for ctrlAI.
-Autonomous GitHub monitor — identifies inactive issues and keeps your project board healthy.
+Stale Issue Monitor - Autonomous OAuth Agent for ctrlAI.
+Autonomous GitHub monitor - identifies inactive issues and keeps your project board healthy.
 
 This agent retrieves its own GitHub OAuth token from Token Vault directly.
-It is not triggered by employees — it runs on schedule or manual trigger.
+It is not triggered by employees - it runs on schedule or manual trigger.
 """
 
 import json
@@ -22,7 +22,7 @@ from core.token_service import get_github_token
 GITHUB_BASE = "https://api.github.com"
 AGENT_NAME = "stale_issue_monitor"
 
-# Default repo to monitor — can be overridden
+# Default repo to monitor - can be overridden
 DEFAULT_OWNER = "GautamRonanki"
 DEFAULT_REPO = "ctrlAI"
 
@@ -95,7 +95,7 @@ def _categorize_issues(issues: list[dict], threshold_days: int = 7) -> dict:
 async def _post_stale_comment(
     github_token: str, owner: str, repo: str, issue_number: int, days_inactive: int
 ) -> dict:
-    """Post a comment on a stale issue. HIGH-STAKES — caller must verify CIBA."""
+    """Post a comment on a stale issue. HIGH-STAKES - caller must verify CIBA."""
     if not check_scope_permission(AGENT_NAME, "post_comments"):
         return {
             "error": f"Permission denied: {AGENT_NAME} does not have post_comments scope"
@@ -148,7 +148,7 @@ async def _post_stale_comment(
 async def _add_stale_label(
     github_token: str, owner: str, repo: str, issue_number: int
 ) -> dict:
-    """Add a 'stale' label to an issue. HIGH-STAKES — caller must verify CIBA."""
+    """Add a 'stale' label to an issue. HIGH-STAKES - caller must verify CIBA."""
     if not check_scope_permission(AGENT_NAME, "add_labels"):
         return {
             "error": f"Permission denied: {AGENT_NAME} does not have add_labels scope"

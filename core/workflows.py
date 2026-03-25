@@ -1,5 +1,5 @@
 """
-ctrlAI — Cross-Agent Workflows
+ctrlAI - Cross-Agent Workflows
 ================================
 Real multi-agent collaboration where agents work together on a single task.
 Every inter-agent interaction is governed by the permission matrix and logged.
@@ -28,13 +28,13 @@ from core.logger import log_audit
 async def meeting_prep_workflow(refresh_token: str) -> dict:
     """
     Cross-agent workflow: Prepare for the next meeting.
-    
+
     Flow:
     1. Calendar Agent gets the next meeting
     2. Gmail Agent searches emails related to attendees (inter-agent: calendar → gmail)
-    3. Drive Agent searches files related to meeting topic (inter-agent: calendar → drive — BLOCKED by matrix)
+    3. Drive Agent searches files related to meeting topic (inter-agent: calendar → drive - BLOCKED by matrix)
     4. LLM synthesizes a briefing
-    
+
     Returns:
         {
             "status": "success" | "error",
@@ -71,10 +71,12 @@ async def meeting_prep_workflow(refresh_token: str) -> dict:
         return {
             "status": "error",
             "briefing": "Calendar Agent does not have permission to read events.",
-            "steps": steps + [{"step": "calendar_agent", "status": "permission_denied"}],
+            "steps": steps
+            + [{"step": "calendar_agent", "status": "permission_denied"}],
         }
 
     from agents.calendar_agent import list_events
+
     calendar_result = await list_events(google_token, max_results=1)
 
     if "error" in calendar_result:
@@ -97,16 +99,24 @@ async def meeting_prep_workflow(refresh_token: str) -> dict:
         }
 
     meeting = events[0]
-    steps.append({
-        "step": "calendar_agent",
-        "status": "success",
-        "meeting": meeting.get("summary", ""),
-        "attendees_count": len(meeting.get("attendees", [])),
-    })
+    steps.append(
+        {
+            "step": "calendar_agent",
+            "status": "success",
+            "meeting": meeting.get("summary", ""),
+            "attendees_count": len(meeting.get("attendees", [])),
+        }
+    )
 
     log_audit(
-        "workflow", "calendar_agent", "get_next_meeting", "success",
-        {"meeting": meeting.get("summary", ""), "attendees": len(meeting.get("attendees", []))},
+        "workflow",
+        "calendar_agent",
+        "get_next_meeting",
+        "success",
+        {
+            "meeting": meeting.get("summary", ""),
+            "attendees": len(meeting.get("attendees", [])),
+        },
     )
 
     # ── Step 3: Gmail Agent searches for attendee emails ──
@@ -114,13 +124,17 @@ async def meeting_prep_workflow(refresh_token: str) -> dict:
     emails_result = []
 
     # Check inter-agent permission: calendar_agent → gmail_agent: read_email_context
-    ia_allowed = check_inter_agent_permission("calendar_agent", "gmail_agent", "read_email_context")
-    inter_agent_results.append({
-        "requesting": "Calendar Agent",
-        "target": "Gmail Agent",
-        "action": "read email context",
-        "status": "allowed" if ia_allowed else "denied",
-    })
+    ia_allowed = check_inter_agent_permission(
+        "calendar_agent", "gmail_agent", "read_email_context"
+    )
+    inter_agent_results.append(
+        {
+            "requesting": "Calendar Agent",
+            "target": "Gmail Agent",
+            "action": "read email context",
+            "status": "allowed" if ia_allowed else "denied",
+        }
+    )
 
     if ia_allowed and is_agent_active("gmail_agent"):
         if check_scope_permission("gmail_agent", "gmail.readonly"):
@@ -155,21 +169,28 @@ async def meeting_prep_workflow(refresh_token: str) -> dict:
 
             emails_result = unique_emails[:5]  # Cap at 5
 
-            steps.append({
-                "step": "gmail_agent",
-                "status": "success",
-                "source": "inter-agent request from Calendar Agent",
-                "emails_found": len(emails_result),
-            })
+            steps.append(
+                {
+                    "step": "gmail_agent",
+                    "status": "success",
+                    "source": "inter-agent request from Calendar Agent",
+                    "emails_found": len(emails_result),
+                }
+            )
 
             log_audit(
-                "workflow", "gmail_agent", "search_attendee_emails", "success",
+                "workflow",
+                "gmail_agent",
+                "search_attendee_emails",
+                "success",
                 {"emails_found": len(emails_result), "requested_by": "calendar_agent"},
             )
         else:
             steps.append({"step": "gmail_agent", "status": "permission_denied"})
     else:
-        reason = "inter-agent permission denied" if not ia_allowed else "agent suspended"
+        reason = (
+            "inter-agent permission denied" if not ia_allowed else "agent suspended"
+        )
         steps.append({"step": "gmail_agent", "status": reason})
 
     # ── Step 4: Drive Agent searches for related files ──
@@ -177,13 +198,17 @@ async def meeting_prep_workflow(refresh_token: str) -> dict:
     # calendar_agent does NOT have permission to request from drive_agent
     files_result = None
 
-    ia_drive_allowed = check_inter_agent_permission("calendar_agent", "drive_agent", "search_related_files")
-    inter_agent_results.append({
-        "requesting": "Calendar Agent",
-        "target": "Drive Agent",
-        "action": "search related files",
-        "status": "allowed" if ia_drive_allowed else "denied",
-    })
+    ia_drive_allowed = check_inter_agent_permission(
+        "calendar_agent", "drive_agent", "search_related_files"
+    )
+    inter_agent_results.append(
+        {
+            "requesting": "Calendar Agent",
+            "target": "Drive Agent",
+            "action": "search related files",
+            "status": "allowed" if ia_drive_allowed else "denied",
+        }
+    )
 
     if ia_drive_allowed and is_agent_active("drive_agent"):
         if check_scope_permission("drive_agent", "drive.readonly"):
@@ -191,37 +216,55 @@ async def meeting_prep_workflow(refresh_token: str) -> dict:
 
             meeting_topic = meeting.get("summary", "")
             if meeting_topic:
-                result = await search_files(google_token, query=meeting_topic, max_results=3)
+                result = await search_files(
+                    google_token, query=meeting_topic, max_results=3
+                )
                 if "error" not in result:
                     files_result = result.get("files", [])
 
-            steps.append({
-                "step": "drive_agent",
-                "status": "success",
-                "source": "inter-agent request from Calendar Agent",
-                "files_found": len(files_result) if files_result else 0,
-            })
+            steps.append(
+                {
+                    "step": "drive_agent",
+                    "status": "success",
+                    "source": "inter-agent request from Calendar Agent",
+                    "files_found": len(files_result) if files_result else 0,
+                }
+            )
         else:
             steps.append({"step": "drive_agent", "status": "permission_denied"})
     else:
-        reason = "inter-agent permission denied" if not ia_drive_allowed else "agent suspended"
-        steps.append({
-            "step": "drive_agent",
-            "status": reason,
-            "note": "Calendar Agent cannot request file searches from Drive Agent per the permission matrix",
-        })
+        reason = (
+            "inter-agent permission denied"
+            if not ia_drive_allowed
+            else "agent suspended"
+        )
+        steps.append(
+            {
+                "step": "drive_agent",
+                "status": reason,
+                "note": "Calendar Agent cannot request file searches from Drive Agent per the permission matrix",
+            }
+        )
 
         log_audit(
-            "workflow", "calendar_agent", "request:drive_agent:search_related_files",
-            "denied", {"reason": "not in inter-agent permission matrix"},
+            "workflow",
+            "calendar_agent",
+            "request:drive_agent:search_related_files",
+            "denied",
+            {"reason": "not in inter-agent permission matrix"},
         )
 
     # ── Step 5: LLM synthesizes the briefing ──
-    briefing = await _generate_briefing(meeting, emails_result, files_result, inter_agent_results)
+    briefing = await _generate_briefing(
+        meeting, emails_result, files_result, inter_agent_results
+    )
     steps.append({"step": "briefing_generation", "status": "success"})
 
     log_audit(
-        "workflow", "orchestrator", "meeting_prep_complete", "success",
+        "workflow",
+        "orchestrator",
+        "meeting_prep_complete",
+        "success",
         {"meeting": meeting.get("summary", ""), "steps": len(steps)},
     )
 
@@ -257,14 +300,19 @@ async def _generate_briefing(
     if emails:
         email_lines = []
         for e in emails:
-            email_lines.append(f"- From: {e.get('from', '?')} | Subject: {e.get('subject', '?')} | Preview: {e.get('snippet', '')[:100]}")
+            email_lines.append(
+                f"- From: {e.get('from', '?')} | Subject: {e.get('subject', '?')} | Preview: {e.get('snippet', '')[:100]}"
+            )
         email_info = "Related emails:\n" + "\n".join(email_lines)
 
     files_info = ""
     if files is None:
         files_info = "Drive search was blocked by the inter-agent permission matrix (Calendar Agent cannot request file searches from Drive Agent)."
     elif files:
-        file_lines = [f"- {f.get('name', '?')} ({f.get('type', '').split('.')[-1] if '.' in f.get('type', '') else f.get('type', '')})" for f in files]
+        file_lines = [
+            f"- {f.get('name', '?')} ({f.get('type', '').split('.')[-1] if '.' in f.get('type', '') else f.get('type', '')})"
+            for f in files
+        ]
         files_info = "Related files found:\n" + "\n".join(file_lines)
     else:
         files_info = "No related files found in Drive."
@@ -272,7 +320,9 @@ async def _generate_briefing(
     ia_info = "Inter-agent permissions enforced:\n"
     for r in inter_agent_results:
         status_icon = "✅ Allowed" if r["status"] == "allowed" else "🚫 Denied"
-        ia_info += f"- {r['requesting']} → {r['target']}: {r['action']} — {status_icon}\n"
+        ia_info += (
+            f"- {r['requesting']} → {r['target']}: {r['action']} - {status_icon}\n"
+        )
 
     prompt = f"""You are the ctrlAI meeting preparation assistant. Generate a concise, actionable meeting briefing.
 
@@ -293,7 +343,9 @@ Write a briefing that includes:
 Keep it concise and actionable. Use bullet points. Format for Slack (use * for bold)."""
 
     llm = get_llm()
-    response = await call_llm(llm, [{"role": "user", "content": prompt}], label="meeting_prep_briefing")
+    response = await call_llm(
+        llm, [{"role": "user", "content": prompt}], label="meeting_prep_briefing"
+    )
 
     return response.content
 
@@ -319,6 +371,8 @@ def format_workflow_result(result: dict) -> str:
 
     # Add step count
     steps = result.get("steps", [])
-    parts.append(f"\n📊 Workflow completed in {len(steps)} steps. Full trace logged to audit trail.")
+    parts.append(
+        f"\n📊 Workflow completed in {len(steps)} steps. Full trace logged to audit trail."
+    )
 
     return "\n".join(parts)

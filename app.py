@@ -1,5 +1,5 @@
 """
-ctrlAI — Main FastAPI Application
+ctrlAI - Main FastAPI Application
 Manual auth implementation with Connected Accounts flow for Token Vault.
 """
 
@@ -284,7 +284,7 @@ async def connect_google_complete(request: Request, connect_code: str):
 async def get_token_via_vault(refresh_token: str, connection: str) -> dict:
     """
     Exchange an Auth0 refresh token for an external provider's access token via Token Vault.
-    This is the production pattern — agents call this, never the Management API.
+    This is the production pattern - agents call this, never the Management API.
     """
     async with httpx.AsyncClient() as client:
         response = await client.post(
@@ -484,7 +484,7 @@ async def test_gmail(request: Request):
 
     messages = gmail_response.json().get("messages", [])
     return {
-        "status": "SUCCESS — Token retrieved via Token Vault exchange!",
+        "status": "SUCCESS - Token retrieved via Token Vault exchange!",
         "method": "Token Vault (refresh token exchange)",
         "scopes": token_data.get("scope"),
         "expires_in": token_data.get("expires_in"),

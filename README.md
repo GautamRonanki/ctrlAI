@@ -2,7 +2,7 @@
 
 **Identity and Permission Control Plane for AI Agents**
 
-ctrlAI gives every AI agent a registered identity with explicitly scoped permissions, enforces inter-agent communication boundaries, and requires human approval for high-stakes actions — built on Auth0 Token Vault and CIBA.
+ctrlAI gives every AI agent a registered identity with explicitly scoped permissions, enforces inter-agent communication boundaries, and requires human approval for high-stakes actions - built on Auth0 Token Vault and CIBA.
 
 ## Quick Start
 
@@ -33,12 +33,12 @@ python -m slack_bot.app
 
 ## Architecture
 
-- **Slack Bot** — Employee-facing interface (Socket Mode)
-- **FastAPI Backend** — Auth0 callbacks, Token Vault, CIBA, audit logging
-- **LangGraph Orchestrator** — Multi-agent state machine with permission enforcement
-- **Streamlit Dashboard** — Admin control plane for permissions and audit logs
-- **Auth0 Token Vault** — Secure OAuth token management for agents
-- **CIBA** — Human-in-the-loop approval for high-stakes actions
+- **Slack Bot** - Employee-facing interface (Socket Mode)
+- **FastAPI Backend** - Auth0 callbacks, Token Vault, CIBA, audit logging
+- **LangGraph Orchestrator** - Multi-agent state machine with permission enforcement
+- **Streamlit Dashboard** - Admin control plane for permissions and audit logs
+- **Auth0 Token Vault** - Secure OAuth token management for agents
+- **CIBA** - Human-in-the-loop approval for high-stakes actions
 
 ## Agents
 

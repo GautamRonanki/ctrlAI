@@ -1,6 +1,6 @@
 """
 Google Drive Agent for ctrlAI.
-Manages your Google Drive — accessing, organizing, and maintaining your files and documents.
+Manages your Google Drive - accessing, organizing, and maintaining your files and documents.
 Each function checks permissions before executing.
 """
 
@@ -112,7 +112,7 @@ async def delete_file(
     google_token: str, file_id: str, agent_name: str = "drive_agent"
 ) -> dict:
     """
-    Delete a file from Google Drive. HIGH-STAKES action — requires CIBA approval.
+    Delete a file from Google Drive. HIGH-STAKES action - requires CIBA approval.
     Caller must verify CIBA approval BEFORE calling this function.
     """
     if not check_scope_permission(agent_name, "delete_files"):

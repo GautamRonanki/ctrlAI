@@ -1,5 +1,5 @@
 """
-ctrlAI — Slack Block Kit Formatter
+ctrlAI - Slack Block Kit Formatter
 ====================================
 Converts plain text responses into rich Slack Block Kit messages.
 Makes the Slack interface look professional and polished.
@@ -83,7 +83,7 @@ def format_orchestrator_result_blocks(
         )
     elif ciba_status and ciba_status not in ("skipped", None):
         blocks.append(
-            context_block(f"🚫 Action {ciba_status} — blocked for your safety")
+            context_block(f"🚫 Action {ciba_status} - blocked for your safety")
         )
 
     # Main response
@@ -149,7 +149,7 @@ def format_session_summary_blocks(
         field_items.append(f"*Action:*\n{humanize_lower(action)}")
 
     if result_summary:
-        # First sentence only — keep it brief
+        # First sentence only - keep it brief
         brief = result_summary.split(". ")[0].split("\n")[0][:150]
         if not brief.endswith("."):
             brief += "."

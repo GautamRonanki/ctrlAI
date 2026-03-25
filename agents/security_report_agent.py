@@ -1,7 +1,7 @@
 """
-Security Report Agent — Autonomous agent for ctrlAI.
-Autonomous security monitor — analyzes agent activity and alerts administrators on policy violations.
-This agent runs autonomously — no employee triggers it.
+Security Report Agent - Autonomous agent for ctrlAI.
+Autonomous security monitor - analyzes agent activity and alerts administrators on policy violations.
+This agent runs autonomously - no employee triggers it.
 """
 
 import json
@@ -171,7 +171,7 @@ Audit Data (last 24 hours):
 {analysis_str}
 
 Generate a security report with:
-1. A one-line overall status (e.g., "All clear" or "Attention needed — 3 permission violations detected")
+1. A one-line overall status (e.g., "All clear" or "Attention needed - 3 permission violations detected")
 2. Key metrics summary (total events, denials, CIBA approvals, inter-agent violations)
 3. If there are any denied actions or violations, explain what happened and which agents were involved
 4. A risk assessment: Low / Medium / High based on the findings
@@ -188,7 +188,7 @@ Keep it concise and professional. Use Slack formatting: *single asterisks* for b
         report_text = response.content.strip()
     except Exception as e:
         report_text = (
-            f"*Security Report — Auto-generated*\n\n"
+            f"*Security Report - Auto-generated*\n\n"
             f"• Total events: {analysis['total_events']}\n"
             f"• Denied actions: {analysis['denied_count']}\n"
             f"• CIBA events: {analysis['ciba_count']}\n"
@@ -240,7 +240,7 @@ async def send_alert_email(report: str, gmail_token: str) -> dict:
     result = await send_email(
         google_token=gmail_token,
         to=admin_email,
-        subject="⚠️ ctrlAI Security Alert — Action Required",
+        subject="⚠️ ctrlAI Security Alert - Action Required",
         body=report,
         agent_name="gmail_agent",
     )

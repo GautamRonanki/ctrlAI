@@ -12,7 +12,7 @@ from typing import Any
 from langchain_openai import ChatOpenAI
 from loguru import logger
 
-# Shared usage stats file — readable by both Slack bot and Streamlit
+# Shared usage stats file - readable by both Slack bot and Streamlit
 USAGE_STATS_PATH = Path(__file__).parent.parent / "logs" / "llm_usage.json"
 USAGE_STATS_PATH.parent.mkdir(exist_ok=True)
 
@@ -63,7 +63,7 @@ async def call_llm(
 ) -> Any:
     """
     Call the LLM with logging, token tracking, and error handling.
-    Use this for all LLM calls — including inside the orchestrator.
+    Use this for all LLM calls - including inside the orchestrator.
     """
     start = time.time()
     try:

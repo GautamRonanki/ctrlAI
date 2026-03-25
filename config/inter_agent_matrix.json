@@ -1,0 +1,80 @@
+{
+  "gmail_agent": {
+    "drive_agent": [
+      "store_attachment"
+    ],
+    "calendar_agent": [
+      "check_availability"
+    ],
+    "github_agent": [
+      "read_issues"
+    ]
+  },
+  "calendar_agent": {
+    "gmail_agent": [
+      "read_email_context",
+      "send_email",
+      "send_alert_email"
+    ],
+    "drive_agent": [
+      "store_attachment",
+      "delete_file"
+    ],
+    "github_agent": [
+      "read_issues",
+      "post_comments"
+    ],
+    "stale_issue_monitor": [
+      "read_issues"
+    ]
+  },
+  "github_agent": {
+    "gmail_agent": [
+      "read_email_context"
+    ],
+    "drive_agent": [
+      "store_attachment",
+      "delete_file",
+      "read_files"
+    ],
+    "stale_issue_monitor": [
+      "read_issues"
+    ]
+  },
+  "security_report_agent": {
+    "gmail_agent": [
+      "send_alert_email"
+    ],
+    "github_agent": [
+      "read_issues",
+      "post_comments"
+    ]
+  },
+  "drive_agent": {
+    "calendar_agent": [
+      "check_availability",
+      "create_event"
+    ],
+    "gmail_agent": [
+      "read_email_context",
+      "send_email"
+    ],
+    "github_agent": [
+      "post_comments"
+    ]
+  },
+  "stale_issue_monitor": {
+    "github_agent": [
+      "post_comments"
+    ],
+    "drive_agent": [
+      "store_attachment",
+      "delete_file"
+    ],
+    "calendar_agent": [
+      "check_availability",
+      "create_event",
+      "read_events"
+    ]
+  }
+}

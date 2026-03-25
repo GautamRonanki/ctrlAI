@@ -1,5 +1,5 @@
 """
-ctrlAI — LangGraph Master Orchestrator
+ctrlAI - LangGraph Master Orchestrator
 =======================================
 This is the brain of ctrlAI. It replaces the hand-rolled routing in slack_bot/app.py
 with a proper LangGraph state machine.
@@ -296,14 +296,14 @@ async def ciba_checkpoint_node(state: OrchestratorState) -> dict:
             + [{"node": "ciba_checkpoint", "status": "not_required"}],
         }
 
-    # High-stakes — trigger CIBA
+    # High-stakes - trigger CIBA
     ciba_user_id = state.get("ciba_user_id") or os.getenv(
         "EMERGENCY_COORDINATOR_USER_ID", ""
     )
     if not ciba_user_id:
         return {
             "error": "no_ciba_user",
-            "response": "Cannot request approval — no CIBA user configured.",
+            "response": "Cannot request approval - no CIBA user configured.",
             "steps": state.get("steps", [])
             + [{"node": "ciba_checkpoint", "status": "no_user"}],
         }
@@ -365,7 +365,7 @@ async def agent_executor_node(state: OrchestratorState) -> dict:
     if not token:
         return {
             "error": "no_token",
-            "response": "Cannot execute — no token available.",
+            "response": "Cannot execute - no token available.",
             "steps": state.get("steps", [])
             + [{"node": "agent_executor", "status": "no_token"}],
         }
@@ -504,14 +504,14 @@ async def response_formatter_node(state: OrchestratorState) -> dict:
 
     result = state.get("agent_result")
     if not result:
-        return {"response": "Something went wrong — no result from the agent."}
+        return {"response": "Something went wrong - no result from the agent."}
 
     agent = state["agent"]
     action = state["action"]
     user_message = state.get("user_message", "")
 
     # For simple confirmations (send_email, create_event, delete_file, create_comment),
-    # use the hardcoded formatter — no need to burn tokens
+    # use the hardcoded formatter - no need to burn tokens
     simple_actions = {"send_email", "create_event", "delete_file", "create_comment"}
     if action in simple_actions:
         try:
@@ -548,11 +548,11 @@ The {agent.replace("_", " ")} retrieved this data:
 
 Your job:
 1. Answer the user's question directly and conversationally based on the data above
-2. Highlight the most relevant information — don't just list everything
+2. Highlight the most relevant information - don't just list everything
 3. If there are details worth noting (attachments, conflicts, deadlines), mention them
 4. At the end, suggest 1-2 natural follow-up actions the user might want (e.g., "Want me to save the attachment to Drive?" or "Should I create a calendar event for this?")
 
-Keep it concise. Use Slack formatting: *single asterisks* for bold (NOT **double**), • for lists. Never use markdown formatting like **bold** or ### headers — only Slack mrkdwn. Do not make up information not present in the data."""
+Keep it concise. Use Slack formatting: *single asterisks* for bold (NOT **double**), • for lists. Never use markdown formatting like **bold** or ### headers - only Slack mrkdwn. Do not make up information not present in the data."""
 
         response = await call_llm(
             llm,
@@ -614,7 +614,7 @@ def _format_result(agent: str, action: str, result: dict) -> str:
                 return "No upcoming events found."
             lines = [f"Found {result['count']} upcoming events:"]
             for e in events:
-                lines.append(f"• *{e['summary']}* — {e['start'][:16]}")
+                lines.append(f"• *{e['summary']}* - {e['start'][:16]}")
             return "\n".join(lines)
         elif action == "create_event":
             return f"✅ Event created! Link: {result.get('link', '')}"
