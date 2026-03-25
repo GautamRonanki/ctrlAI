@@ -79,6 +79,24 @@ st.markdown(
         font-size: 0.82em;
         margin: 2px 2px;
     }
+    .gear-icon-btn {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        background: none;
+        border: 1px solid #ddd;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 1.1em;
+        padding: 5px 5px;
+        line-height: 1;
+        color: #666;
+        z-index: 1;
+    }
+    .gear-icon-btn:hover {
+        background: #f0f0f0;
+        border-color: #bbb;
+    }
     .flow-container {
         display: flex;
         align-items: center;
@@ -297,41 +315,52 @@ def show_permission_dialog(agent_name: str):
 
     st.divider()
 
-    col_scopes, col_highstakes = st.columns(2)
+    available = get_available_scopes(agent_name)
+    available_hs = get_available_high_stakes(agent_name)
+    current_scopes = list(agent.permitted_scopes)
+    current_hs = list(agent.high_stakes_actions)
 
-    with col_scopes:
-        st.markdown("**Permissions**")
-        st.caption("What this agent is allowed to do.")
-        available = get_available_scopes(agent_name)
-        current_scopes = list(agent.permitted_scopes)
+    all_keys = list(dict.fromkeys(available + available_hs))
+    label_map = {**ACTION_LABELS, **SCOPE_LABELS}
 
-        new_scopes = []
-        for scope in available:
-            label = SCOPE_LABELS.get(scope, scope)
-            checked = st.checkbox(
-                label,
-                value=scope in current_scopes,
-                key=f"dlg_scope_{agent_name}_{scope}",
-            )
-            if checked:
-                new_scopes.append(scope)
+    rows = [
+        {
+            "Scope": label_map.get(k, k),
+            "Permissions": k in current_scopes,
+            "Requires Approval (CIBA)": k in current_hs,
+        }
+        for k in all_keys
+    ]
 
-    with col_highstakes:
-        st.markdown("**Requires Approval (CIBA)**")
-        st.caption("Actions that need your confirmation before executing.")
-        available_hs = get_available_high_stakes(agent_name)
-        current_hs = list(agent.high_stakes_actions)
+    st.caption("**Permissions** — what this agent is allowed to do.")
+    st.caption(
+        "**Requires Approval (CIBA)** — actions that need your confirmation before executing."
+    )
 
-        new_hs = []
-        for action in available_hs:
-            label = ACTION_LABELS.get(action, action)
-            checked = st.checkbox(
-                label,
-                value=action in current_hs,
-                key=f"dlg_hs_{agent_name}_{action}",
-            )
-            if checked:
-                new_hs.append(action)
+    edited = st.data_editor(
+        pd.DataFrame(rows),
+        column_config={
+            "Scope": st.column_config.TextColumn("Scope", disabled=True),
+            "Permissions": st.column_config.CheckboxColumn("Permissions"),
+            "Requires Approval (CIBA)": st.column_config.CheckboxColumn(
+                "Requires Approval (CIBA)"
+            ),
+        },
+        hide_index=True,
+        use_container_width=True,
+        key=f"dlg_table_{agent_name}",
+    )
+
+    new_scopes = [
+        all_keys[i]
+        for i, row in edited.iterrows()
+        if row["Permissions"] and all_keys[i] in available
+    ]
+    new_hs = [
+        all_keys[i]
+        for i, row in edited.iterrows()
+        if row["Requires Approval (CIBA)"] and all_keys[i] in available_hs
+    ]
 
     st.divider()
     if st.button(
@@ -347,7 +376,7 @@ def show_permission_dialog(agent_name: str):
 # Render agent cards row by row so cards in the same row share equal height
 agent_list = list(agents.items())
 for row_start in range(0, len(agent_list), 3):
-    row_agents = agent_list[row_start:row_start + 3]
+    row_agents = agent_list[row_start : row_start + 3]
     cols = st.columns(3)
     for j, (name, agent) in enumerate(row_agents):
         with cols[j]:
@@ -368,7 +397,8 @@ for row_start in range(0, len(agent_list), 3):
 
             st.markdown(
                 f"""
-            <div class="{card_class}">
+            <div class="{card_class}" style="position:relative;">
+                <button class="gear-icon-btn">⚙️</button>
                 <div class="agent-name">{status_emoji} {humanize(name)}</div>
                 <div class="agent-detail">{agent.description}</div>
                 <div class="agent-detail" style="margin-top:8px;"><b>Provider:</b> {PROVIDER_LABELS.get(agent.oauth_provider, agent.oauth_provider)}</div>
@@ -380,7 +410,7 @@ for row_start in range(0, len(agent_list), 3):
                 unsafe_allow_html=True,
             )
 
-            if st.button("⚙️ Manage", key=f"settings_{name}", use_container_width=True):
+            if st.button("⚙️", key=f"settings_{name}", use_container_width=False):
                 show_permission_dialog(name)
 
 # Equalize card heights across columns in each row via JS
@@ -404,6 +434,54 @@ components.html(
         run();
         setTimeout(run, 200);
         setTimeout(run, 800);
+    })();
+
+    (function wireGearButtons() {
+        const doc = window.parent.document;
+        let debounce;
+
+        function wire() {
+            const gears = Array.from(doc.querySelectorAll('.gear-icon-btn'));
+            if (gears.length === 0) return;
+
+            // Streamlit trigger buttons: ⚙️ buttons that are NOT inside a card div
+            const stBtns = Array.from(doc.querySelectorAll('button')).filter(b =>
+                b.textContent.trim().startsWith('\u2699') &&
+                !b.closest('.agent-card') &&
+                !b.closest('.agent-card-suspended')
+            );
+
+            if (stBtns.length !== gears.length) return;
+
+            stBtns.forEach(btn => {
+                // Walk up to find the outermost Streamlit wrapper and collapse it
+                const container = btn.closest('[data-testid="stElementContainer"]') ||
+                                  btn.closest('[data-testid="stButton"]')?.parentElement ||
+                                  btn.parentElement?.parentElement;
+                if (container) {
+                    container.style.height = '0';
+                    container.style.overflow = 'hidden';
+                    container.style.padding = '0';
+                    container.style.margin = '0';
+                }
+            });
+
+            // Re-assign onclick each pass (safe: overwrites previous, no duplicates)
+            gears.forEach((gear, i) => {
+                gear.onclick = (e) => {
+                    e.stopPropagation();
+                    stBtns[i].click();
+                };
+            });
+        }
+
+        // Re-wire on every DOM change (survives Streamlit re-renders)
+        const observer = new MutationObserver(() => {
+            clearTimeout(debounce);
+            debounce = setTimeout(wire, 80);
+        });
+        observer.observe(doc.body, { childList: true, subtree: true });
+        wire();
     })();
     </script>
     """,
