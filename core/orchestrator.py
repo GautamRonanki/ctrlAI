@@ -180,24 +180,24 @@ async def permission_gate_node(state: OrchestratorState) -> dict:
     # Map actions to required scopes
     scope_map = {
         "gmail_agent": {
-            "list_emails": "gmail.readonly",
-            "search_emails": "gmail.readonly",
-            "read_email": "gmail.readonly",
-            "send_email": "gmail.send",
+            "list_emails": "list_emails",
+            "search_emails": "search_emails",
+            "read_email": "read_emails",
+            "send_email": "send_emails",
         },
         "calendar_agent": {
-            "list_events": "calendar.events.readonly",
-            "create_event": "calendar.events",
+            "list_events": "list_events",
+            "create_event": "create_events",
         },
         "drive_agent": {
-            "list_files": "drive.readonly",
-            "search_files": "drive.readonly",
-            "delete_file": "drive.file",
+            "list_files": "list_files",
+            "search_files": "search_files",
+            "delete_file": "delete_files",
         },
         "github_agent": {
-            "list_repos": "repo",
-            "list_issues": "repo",
-            "create_comment": "repo",
+            "list_repos": "list_repos",
+            "list_issues": "list_issues",
+            "create_comment": "post_comments",
         },
     }
 

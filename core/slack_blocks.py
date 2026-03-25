@@ -24,7 +24,10 @@ def divider_block() -> dict:
 
 
 def header_block(text: str) -> dict:
-    return {"type": "header", "text": {"type": "plain_text", "text": text, "emoji": True}}
+    return {
+        "type": "header",
+        "text": {"type": "plain_text", "text": text, "emoji": True},
+    }
 
 
 def context_block(text: str) -> dict:
@@ -43,6 +46,7 @@ def fields_block(fields: list[str]) -> dict:
 # Processing Message
 # ============================================================
 
+
 def processing_blocks() -> list[dict]:
     return [
         text_block("🤔 Processing your request..."),
@@ -53,7 +57,10 @@ def processing_blocks() -> list[dict]:
 # Agent Result Blocks
 # ============================================================
 
-def format_orchestrator_result_blocks(response: str, agent: str, action: str, ciba_status: str = None) -> list[dict]:
+
+def format_orchestrator_result_blocks(
+    response: str, agent: str, action: str, ciba_status: str = None
+) -> list[dict]:
     """Format an orchestrator result as Slack blocks."""
     blocks = []
 
@@ -71,9 +78,13 @@ def format_orchestrator_result_blocks(response: str, agent: str, action: str, ci
 
     # CIBA notice if applicable
     if ciba_status == "approved":
-        blocks.append(context_block("✅ Human approval granted via Guardian push notification"))
+        blocks.append(
+            context_block("✅ Human approval granted via Guardian push notification")
+        )
     elif ciba_status and ciba_status not in ("skipped", None):
-        blocks.append(context_block(f"🚫 Action {ciba_status} — blocked for your safety"))
+        blocks.append(
+            context_block(f"🚫 Action {ciba_status} — blocked for your safety")
+        )
 
     # Main response
     blocks.append(text_block(response))
@@ -85,7 +96,14 @@ def format_orchestrator_result_blocks(response: str, agent: str, action: str, ci
 # Session Summary Blocks
 # ============================================================
 
-def format_session_summary_blocks(steps: list, agent: str = "", action: str = "", ciba_status: str = None) -> list[dict]:
+
+def format_session_summary_blocks(
+    steps: list,
+    agent: str = "",
+    action: str = "",
+    ciba_status: str = None,
+    result_summary: str = "",
+) -> list[dict]:
     """Format a session summary as Slack blocks for threading."""
     blocks = []
     blocks.append(header_block("🔒 Session Summary"))
@@ -116,33 +134,59 @@ def format_session_summary_blocks(steps: list, agent: str = "", action: str = ""
             if status == "allowed":
                 permissions_allowed.append(humanize(step.get("agent", "?")))
             elif status in ("denied", "agent_suspended", "permission_denied"):
-                permissions_denied.append(f"{humanize(step.get('agent', '?'))}: {status.replace('_', ' ')}")
+                permissions_denied.append(
+                    f"{humanize(step.get('agent', '?'))}: {status.replace('_', ' ')}"
+                )
 
     # Build fields
     field_items = []
-    field_items.append(f"*Services accessed:*\n{', '.join(sorted(services)) if services else 'None'}")
+    field_items.append(
+        f"*Services accessed:*\n{', '.join(sorted(services)) if services else 'None'}"
+    )
     if agent:
         field_items.append(f"*Agent:*\n{humanize(agent)}")
     if action:
         field_items.append(f"*Action:*\n{humanize_lower(action)}")
-    field_items.append(f"*Steps:*\n{len(steps)}")
+
+    if result_summary:
+        # First sentence only — keep it brief
+        brief = result_summary.split(". ")[0].split("\n")[0][:150]
+        if not brief.endswith("."):
+            brief += "."
+        field_items.append(f"*Result:*\n{brief}")
 
     blocks.append(fields_block(field_items))
 
     # Permissions
     if permissions_allowed:
-        blocks.append(text_block("*Permissions granted:*\n" + "\n".join(f"  ✅ {p}" for p in permissions_allowed)))
+        blocks.append(
+            text_block(
+                "*Permissions granted:*\n"
+                + "\n".join(f"  ✅ {p}" for p in permissions_allowed)
+            )
+        )
     if permissions_denied:
-        blocks.append(text_block("*Permissions denied:*\n" + "\n".join(f"  🚫 {p}" for p in permissions_denied)))
+        blocks.append(
+            text_block(
+                "*Permissions denied:*\n"
+                + "\n".join(f"  🚫 {p}" for p in permissions_denied)
+            )
+        )
 
     # CIBA
     if ciba_status == "approved":
-        blocks.append(text_block("*Human-in-the-loop:*\n  ✅ Approved via Guardian push notification"))
+        blocks.append(
+            text_block(
+                "*Human-in-the-loop:*\n  ✅ Approved via Guardian push notification"
+            )
+        )
     elif ciba_status and ciba_status not in ("skipped", None):
         blocks.append(text_block(f"*Human-in-the-loop:*\n  🚫 {ciba_status.title()}"))
 
     blocks.append(divider_block())
-    blocks.append(context_block("Full execution trace available in the admin dashboard"))
+    blocks.append(
+        context_block("Full execution trace available in the admin dashboard")
+    )
 
     return blocks
 
@@ -150,6 +194,7 @@ def format_session_summary_blocks(steps: list, agent: str = "", action: str = ""
 # ============================================================
 # Workflow Summary Blocks
 # ============================================================
+
 
 def format_workflow_summary_blocks(result: dict) -> list[dict]:
     """Format a cross-agent workflow summary as Slack blocks."""
@@ -187,7 +232,9 @@ def format_workflow_summary_blocks(result: dict) -> list[dict]:
         ia_lines = ["*Inter-agent permissions enforced:*"]
         for r in ia_results:
             icon = "✅" if r["status"] == "allowed" else "🚫"
-            ia_lines.append(f"  {icon} {r['requesting']} → {r['target']}: {r['action']}")
+            ia_lines.append(
+                f"  {icon} {r['requesting']} → {r['target']}: {r['action']}"
+            )
         blocks.append(text_block("\n".join(ia_lines)))
 
     # Execution steps
@@ -204,7 +251,9 @@ def format_workflow_summary_blocks(result: dict) -> list[dict]:
     blocks.append(text_block("\n".join(step_lines)))
 
     blocks.append(divider_block())
-    blocks.append(context_block("Full execution trace available in the admin dashboard"))
+    blocks.append(
+        context_block("Full execution trace available in the admin dashboard")
+    )
 
     return blocks
 
@@ -212,6 +261,7 @@ def format_workflow_summary_blocks(result: dict) -> list[dict]:
 # ============================================================
 # Inter-Agent Result Blocks
 # ============================================================
+
 
 def format_inter_agent_blocks(result: dict) -> list[dict]:
     """Format an inter-agent result as Slack blocks."""
@@ -223,23 +273,35 @@ def format_inter_agent_blocks(result: dict) -> list[dict]:
 
     if status == "allowed":
         blocks.append(header_block("✅ Inter-Agent Request Allowed"))
-        blocks.append(fields_block([
-            f"*From:*\n{req}",
-            f"*To:*\n{tgt}",
-            f"*Action:*\n{action}",
-            f"*Status:*\nAllowed",
-        ]))
+        blocks.append(
+            fields_block(
+                [
+                    f"*From:*\n{req}",
+                    f"*To:*\n{tgt}",
+                    f"*Action:*\n{action}",
+                    f"*Status:*\nAllowed",
+                ]
+            )
+        )
         if result.get("description"):
             blocks.append(context_block(result["description"]))
     else:
         blocks.append(header_block("🚫 Inter-Agent Request Denied"))
-        blocks.append(fields_block([
-            f"*From:*\n{req}",
-            f"*To:*\n{tgt}",
-            f"*Action:*\n{action}",
-            f"*Status:*\nDenied",
-        ]))
-        blocks.append(text_block(f"*Reason:* {result.get('reason', 'Not permitted by the inter-agent permission matrix')}"))
+        blocks.append(
+            fields_block(
+                [
+                    f"*From:*\n{req}",
+                    f"*To:*\n{tgt}",
+                    f"*Action:*\n{action}",
+                    f"*Status:*\nDenied",
+                ]
+            )
+        )
+        blocks.append(
+            text_block(
+                f"*Reason:* {result.get('reason', 'Not permitted by the inter-agent permission matrix')}"
+            )
+        )
 
     blocks.append(context_block("Logged to audit trail"))
 

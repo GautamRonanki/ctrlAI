@@ -292,6 +292,7 @@ JSON: {{"agent": "...", "action": "..."}}"""
             agent=agent,
             action=action,
             ciba_status=ciba_status,
+            result_summary=response,
         )
         say(blocks=summary_blocks, text="Session Summary", thread_ts=message_ts)
 
