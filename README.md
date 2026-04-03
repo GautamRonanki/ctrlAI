@@ -29,8 +29,8 @@ Built on **Auth0 Token Vault** and **CIBA** for the [Authorized to Act](https://
 │   Slack Bot      │────▶│              FastAPI Backend                 │
 │ (Employee-facing)│     │  Auth0 callbacks · Token Vault · CIBA        │
 └──────────────────┘     └────────────────┬─────────────────────────────┘
-                                         │
-                                         ▼
+                                          │
+                                          ▼
                         ┌───────────────────────────────────┐
                         │      LangGraph Orchestrator       │
                         │  Router → Permission Gate →       │
