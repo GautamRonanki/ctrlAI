@@ -2,9 +2,9 @@
 
 **Identity and Permission Control Plane for AI Agents**
 
-Organizations are deploying dozens of AI agents — one manages email, another handles documents, another monitors code repositories. These agents need to interact with each other to complete complex workflows. But without governance, no one knows what these agents can access, what they're doing, or who authorized them.
+Organizations are deploying dozens of AI agents. One manages email, another handles documents, another monitors code repositories. These agents need to interact with each other to complete complex workflows. But without governance, no one knows what these agents can access, what they're doing, or who authorized them.
 
-ctrlAI solves this by treating every AI agent as a first-class identity — each with explicitly scoped permissions, governed inter-agent communication rules, and a complete audit trail. Think of it as IAM (Identity and Access Management), but for AI agents instead of humans.
+ctrlAI solves this by treating every AI agent as a first-class identity, each with explicitly scoped permissions, governed inter-agent communication rules, and a complete audit trail. Think of it as IAM (Identity and Access Management), but for AI agents instead of humans.
 
 Built on **Auth0 Token Vault** and **CIBA** for the [Authorized to Act](https://authorizedtoact.devpost.com/) hackathon.
 
@@ -13,10 +13,10 @@ Built on **Auth0 Token Vault** and **CIBA** for the [Authorized to Act](https://
 ## What ctrlAI Demonstrates
 
 - Every agent has a registered identity in Auth0 with explicitly scoped permissions
-- Agents cannot access services outside their scopes — enforced at runtime, not just policy
-- Inter-agent communication is governed by a permission matrix — agents can only talk to other agents they're authorized to reach
+- Agents cannot access services outside their scopes, enforced at runtime, not just policy
+- Inter-agent communication is governed by a permission matrix. Agents can only talk to other agents they are authorized to reach
 - High-stakes actions require human approval via CIBA before execution
-- Permissions can be changed in real time — revoke access and it takes effect on the next request
+- Permissions can be changed in real time. Revoke access and it takes effect on the next request
 - Every action is audited with a full trace visible in the admin dashboard
 - Dynamic evaluation suite generates 100+ tests from the live permission state
 
@@ -25,36 +25,36 @@ Built on **Auth0 Token Vault** and **CIBA** for the [Authorized to Act](https://
 ## Architecture
 
 ```
-┌─────────────────┐     ┌──────────────────────────────────────────────┐
+┌──────────────────┐     ┌──────────────────────────────────────────────┐
 │   Slack Bot      │────▶│              FastAPI Backend                 │
-│ (Employee-facing)│     │  Auth0 callbacks · Token Vault · CIBA       │
-└─────────────────┘     └────────────────┬─────────────────────────────┘
+│ (Employee-facing)│     │  Auth0 callbacks · Token Vault · CIBA        │
+└──────────────────┘     └────────────────┬─────────────────────────────┘
                                          │
                                          ▼
-                        ┌──────────────────────────────────┐
+                        ┌───────────────────────────────────┐
                         │      LangGraph Orchestrator       │
                         │  Router → Permission Gate →       │
                         │  Token Retrieval → CIBA Check →   │
                         │  Agent Executor → Formatter       │
-                        └──────┬───────────────────┬───────┘
+                        └──────┬───────────────────┬────────┘
                                │                   │
-                    ┌──────────▼──────┐   ┌───────▼────────┐
+                    ┌──────────▼───────┐   ┌───────▼─────────┐
                     │ Employee Agents  │   │Autonomous Agents│
                     │ Gmail · Drive    │   │ Security Report │
                     │ Calendar · GitHub│   │ Stale Issue Mon.│
-                    └──────────┬──────┘   └───────┬────────┘
+                    └──────────┬───────┘   └───────┬─────────┘
                                │                   │
-                        ┌──────▼───────────────────▼──────┐
-                        │       Auth0 Token Vault          │
+                        ┌──────▼───────────────────▼────────┐
+                        │       Auth0 Token Vault           │
                         │  Google OAuth · GitHub OAuth      │
                         │  Token exchange · Auto-refresh    │
-                        └──────────────────────────────────┘
+                        └───────────────────────────────────┘
 
-┌─────────────────────────────────────────────────────────────┐
-│              Streamlit Admin Dashboard                       │
-│  Agent Registry · Intra-Agent Matrix · Audit Log            │
-│  Security Reports · Dynamic Evals · LLM Usage              │
-└─────────────────────────────────────────────────────────────┘
+       ┌──────────────────────────────────────────────────────────────┐
+       │              Streamlit Admin Dashboard                       │
+       │  Agent Registry · Intra-Agent Matrix · Audit Log             │
+       │  Security Reports · Dynamic Evals · LLM Usage                │
+       └──────────────────────────────────────────────────────────────┘
 ```
 
 ---
@@ -67,7 +67,7 @@ Built on **Auth0 Token Vault** and **CIBA** for the [Authorized to Act](https://
 | Drive Agent | Google OAuth | List, read, create, delete, search files | Deleting files |
 | Calendar Agent | Google OAuth | List, read, create, modify events | Creating events |
 | GitHub Agent | GitHub OAuth | List repos/issues, read, post comments | Posting comments |
-| Security Report Agent | Internal | Read audit trail, generate reports | — |
+| Security Report Agent | Internal | Read audit trail, generate reports | None |
 | Stale Issue Monitor | GitHub OAuth | Read repos/issues, post comments, add labels | Comments, labels |
 
 ---
@@ -75,7 +75,7 @@ Built on **Auth0 Token Vault** and **CIBA** for the [Authorized to Act](https://
 ## Key Features
 
 ### Token Vault Integration
-Three agents share a single Google OAuth connection, one uses GitHub OAuth — but each agent has independently scoped permissions. The governance layer operates at the agent identity level, not the provider level. Sharing a connection does not mean sharing access.
+Three agents share a single Google OAuth connection, one uses GitHub OAuth, but each agent has independently scoped permissions. The governance layer operates at the agent identity level, not the provider level. Sharing a connection does not mean sharing access.
 
 ### Inter-Agent Permission Matrix
 A runtime-enforced matrix defines which agent can communicate with which other agent, and what actions it can request. Any request not explicitly permitted is blocked and logged. Both the requesting agent and the receiving agent enforce the boundary independently.
@@ -84,21 +84,21 @@ A runtime-enforced matrix defines which agent can communicate with which other a
 Every high-stakes action (sending email, deleting files, posting public comments, creating events) triggers an async authorization request via Auth0. The agent pauses, the admin receives an approval request, and only proceeds after explicit confirmation.
 
 ### Dynamic Evaluation Suite
-Tests are generated dynamically from the live permission state — not hardcoded. Change a permission on the dashboard, run evals, and the test suite adapts automatically. Covers permission enforcement, CIBA configuration, inter-agent matrix, and LLM routing accuracy.
+Tests are generated dynamically from the live permission state, not hardcoded. Change a permission on the dashboard, run evals, and the test suite adapts automatically. Covers permission enforcement, CIBA configuration, inter-agent matrix, and LLM routing accuracy.
 
 ### Rate Limiting
 Each agent is rate-limited to 20 requests per 60-second window. Exceeding the limit triggers automatic blocking, audit logging, and an email alert to the admin via the inter-agent communication pipeline.
 
 ### Real-Time Permission Changes
-Revoke an agent's scope on the admin dashboard and it takes effect immediately on the next Slack request — no restart, no redeployment. The same applies to suspending agents and modifying the inter-agent matrix.
+Revoke an agent's scope on the admin dashboard and it takes effect immediately on the next Slack request. No restart, no redeployment. The same applies to suspending agents and modifying the inter-agent matrix.
 
 ---
 
 ## Two Interfaces
 
-**Slack Bot (Employee-facing):** Employees message the ctrlAI Slack bot in natural language. The orchestrator routes to the correct agent, enforces permissions, retrieves tokens from Token Vault, and returns results — all within the Slack thread.
+**Slack Bot (Employee-facing):** Employees message the ctrlAI Slack bot in natural language. The orchestrator routes to the correct agent, enforces permissions, retrieves tokens from Token Vault, and returns results, all within the Slack thread.
 
-**Streamlit Dashboard (Admin-facing):** Administrators manage the entire agent ecosystem — agent registry with permission management, interactive inter-agent permission matrix, real-time audit log, autonomous agent controls, dynamic evaluation suite, and LLM usage tracking.
+**Streamlit Dashboard (Admin-facing):** Administrators manage the entire agent ecosystem. The dashboard includes the agent registry with permission management, an interactive inter-agent permission matrix, a real-time audit log, autonomous agent controls, a dynamic evaluation suite, and LLM usage tracking.
 
 ---
 
@@ -112,7 +112,7 @@ Revoke an agent's scope on the admin dashboard and it takes effect immediately o
 | Backend | FastAPI |
 | Admin Dashboard | Streamlit |
 | User Interface | Slack (Socket Mode) |
-| Identity & Auth | Auth0 Token Vault + CIBA |
+| Identity and Auth | Auth0 Token Vault + CIBA |
 | Logging | Python logging + JSONL audit trail |
 
 ---
@@ -147,11 +147,11 @@ python -m slack_bot.app
 ### Environment Variables
 
 See `.env.example` for all required variables:
-- `AUTH0_DOMAIN` — Your Auth0 tenant domain
-- `AUTH0_CLIENT_ID` / `AUTH0_CLIENT_SECRET` — Auth0 application credentials
-- `SLACK_BOT_TOKEN` / `SLACK_APP_TOKEN` — Slack bot credentials
-- `ANTHROPIC_API_KEY` — For Claude LLM calls
-- `ADMIN_ALERT_EMAIL` — Email for security alerts
+- `AUTH0_DOMAIN` - Your Auth0 tenant domain
+- `AUTH0_CLIENT_ID` / `AUTH0_CLIENT_SECRET` - Auth0 application credentials
+- `SLACK_BOT_TOKEN` / `SLACK_APP_TOKEN` - Slack bot credentials
+- `ANTHROPIC_API_KEY` - For Claude LLM calls
+- `ADMIN_ALERT_EMAIL` - Email for security alerts
 
 ---
 
@@ -192,7 +192,7 @@ ctrlAI/
 
 ## The Vision
 
-ctrlAI is a governance layer for agent-driven organizations. Today it governs six agents across two OAuth providers. The architecture is designed to scale to hundreds of agents across any number of providers — each with a registered identity, scoped permissions, governed communication boundaries, and a complete audit trail.
+ctrlAI is a governance layer for agent-driven organizations. Today it governs six agents across two OAuth providers. The architecture is designed to scale to hundreds of agents across any number of providers, each with a registered identity, scoped permissions, governed communication boundaries, and a complete audit trail.
 
 As AI agents proliferate in organizations, the attack surface created by ungoverned agent identities becomes a critical security risk. ctrlAI is the missing piece that makes agent-driven organizations trustworthy.
 
