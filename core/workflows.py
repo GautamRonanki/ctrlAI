@@ -67,7 +67,7 @@ async def meeting_prep_workflow(refresh_token: str) -> dict:
             "steps": steps + [{"step": "calendar_agent", "status": "agent_suspended"}],
         }
 
-    if not check_scope_permission("calendar_agent", "calendar.events.readonly"):
+    if not check_scope_permission("calendar_agent", "list_events"):
         return {
             "status": "error",
             "briefing": "Calendar Agent does not have permission to read events.",
@@ -137,7 +137,7 @@ async def meeting_prep_workflow(refresh_token: str) -> dict:
     )
 
     if ia_allowed and is_agent_active("gmail_agent"):
-        if check_scope_permission("gmail_agent", "gmail.readonly"):
+        if check_scope_permission("gmail_agent", "search_emails"):
             from agents.gmail_agent import search_emails
 
             # Search for emails from attendees
@@ -211,7 +211,7 @@ async def meeting_prep_workflow(refresh_token: str) -> dict:
     )
 
     if ia_drive_allowed and is_agent_active("drive_agent"):
-        if check_scope_permission("drive_agent", "drive.readonly"):
+        if check_scope_permission("drive_agent", "search_files"):
             from agents.drive_agent import search_files
 
             meeting_topic = meeting.get("summary", "")

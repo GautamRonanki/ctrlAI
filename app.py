@@ -529,7 +529,10 @@ async def get_audit_log():
     with open(AUDIT_LOG_PATH) as f:
         for line in f:
             if line.strip():
-                entries.append(json.loads(line))
+                try:
+                    entries.append(json.loads(line))
+                except json.JSONDecodeError:
+                    continue
     return {"entries": entries[-100:]}
 
 

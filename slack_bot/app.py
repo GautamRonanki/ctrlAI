@@ -127,174 +127,179 @@ def _handle_inter_agent(text: str, event: dict, say):
 
 @slack_app.event("message")
 def handle_message(event, say):
-    text = event.get("text", "").strip()
-    slack_user_id = event.get("user", "")
-    message_ts = event.get("ts")
+    try:
+        text = event.get("text", "").strip()
+        slack_user_id = event.get("user", "")
+        message_ts = event.get("ts")
 
-    if event.get("bot_id") or not text:
-        return
+        if event.get("bot_id") or not text:
+            return
 
-    logger.info(f"Slack message from {slack_user_id}: {text}")
-    log_audit(
-        "slack_message", "orchestrator", "receive", "success", {"text": text[:100]}
-    )
+        logger.info(f"Slack message from {slack_user_id}: {text}")
+        log_audit(
+            "slack_message", "orchestrator", "receive", "success", {"text": text[:100]}
+        )
 
-    # Inter-agent command
-    if text.lower().startswith("inter-agent:") or text.lower().startswith(
-        "inter agent:"
-    ):
-        _handle_inter_agent(text, event, say)
-        return
+        # Inter-agent command
+        if text.lower().startswith("inter-agent:") or text.lower().startswith(
+            "inter agent:"
+        ):
+            _handle_inter_agent(text, event, say)
+            return
 
-    # Cross-agent workflow: meeting prep
-    if any(
-        phrase in text.lower()
-        for phrase in [
-            "prepare for my meeting",
-            "meeting prep",
-            "next meeting",
-            "brief me",
-            "meeting briefing",
-            "prepare me for my meeting",
-        ]
-    ):
+        # Cross-agent workflow: meeting prep
+        if any(
+            phrase in text.lower()
+            for phrase in [
+                "prepare for my meeting",
+                "meeting prep",
+                "next meeting",
+                "brief me",
+                "meeting briefing",
+                "prepare me for my meeting",
+            ]
+        ):
+            refresh_token = get_refresh_token()
+            if not refresh_token:
+                say(
+                    "I don't have authentication set up yet. Please log in at the web dashboard first."
+                )
+                return
+
+            say(blocks=processing_blocks(), text="Processing...")
+            result = run_async(meeting_prep_workflow(refresh_token))
+            response = format_workflow_result(result)
+            say(response)
+
+            # Session summary in thread with blocks
+            summary_blocks = format_workflow_summary_blocks(result)
+            say(blocks=summary_blocks, text="Session Summary", thread_ts=message_ts)
+            return
+
+        # Get the refresh token
         refresh_token = get_refresh_token()
         if not refresh_token:
             say(
-                "I don't have authentication set up yet. Please log in at the web dashboard first."
+                "I don't have authentication set up yet. Please log in at the web dashboard first, then try again."
             )
             return
 
         say(blocks=processing_blocks(), text="Processing...")
-        result = run_async(meeting_prep_workflow(refresh_token))
-        response = format_workflow_result(result)
-        say(response)
 
-        # Session summary in thread with blocks
-        summary_blocks = format_workflow_summary_blocks(result)
-        say(blocks=summary_blocks, text="Session Summary", thread_ts=message_ts)
-        return
+        # Quick pre-check: route the message to see if it's high-stakes
+        from core.orchestrator import run_orchestrator
+        from core.permissions import is_high_stakes, get_agent
+        from core.llm import get_llm, call_llm
 
-    # Get the refresh token
-    refresh_token = get_refresh_token()
-    if not refresh_token:
-        say(
-            "I don't have authentication set up yet. Please log in at the web dashboard first, then try again."
-        )
-        return
-
-    say(blocks=processing_blocks(), text="Processing...")
-
-    # Quick pre-check: route the message to see if it's high-stakes
-    from core.orchestrator import run_orchestrator
-    from core.permissions import is_high_stakes, get_agent
-    from core.llm import get_llm, call_llm
-
-    # Use LLM to quickly determine the agent and action
-    llm = get_llm()
-    route_prompt = f"""Determine the agent and action for this request. Respond with ONLY valid JSON.
+        # Use LLM to quickly determine the agent and action
+        llm = get_llm()
+        route_prompt = f"""Determine the agent and action for this request. Respond with ONLY valid JSON.
 Available agents: gmail_agent (list_emails, search_emails, send_email, read_email), calendar_agent (list_events, create_event), drive_agent (list_files, search_files, delete_file), github_agent (list_repos, list_issues, create_comment).
 User request: "{text}"
 JSON: {{"agent": "...", "action": "..."}}"""
 
-    try:
-        route_response = run_async(
-            call_llm(
-                llm, [{"role": "user", "content": route_prompt}], label="slack_precheck"
+        try:
+            route_response = run_async(
+                call_llm(
+                    llm, [{"role": "user", "content": route_prompt}], label="slack_precheck"
+                )
+            )
+            content = route_response.content.strip()
+            if content.startswith("```"):
+                content = content.split("\n", 1)[1].rsplit("```", 1)[0].strip()
+            routing = json.loads(content)
+            pre_agent = routing.get("agent", "none")
+            pre_action = routing.get("action", "none")
+        except Exception:
+            pre_agent = "none"
+            pre_action = "none"
+
+        # If high-stakes, confirm with user before proceeding
+        if pre_agent != "none" and is_high_stakes(pre_agent, pre_action):
+            from core.permissions import get_all_agents
+
+            agent_info = get_all_agents().get(pre_agent)
+            agent_display = pre_agent.replace("_", " ").title()
+            action_display = pre_action.replace("_", " ")
+
+            confirm_blocks = [
+                {
+                    "type": "header",
+                    "text": {"type": "plain_text", "text": "⚠️ High-Stakes Action Detected"},
+                },
+                {
+                    "type": "section",
+                    "text": {
+                        "type": "mrkdwn",
+                        "text": f"*{agent_display}* wants to perform: *{action_display}*\n\nThis action requires your approval via push notification. Do you want to proceed?",
+                    },
+                },
+                {
+                    "type": "actions",
+                    "elements": [
+                        {
+                            "type": "button",
+                            "text": {"type": "plain_text", "text": "✅ Proceed"},
+                            "style": "primary",
+                            "action_id": f"confirm_ciba_{message_ts}",
+                            "value": json.dumps({"text": text, "ts": message_ts}),
+                        },
+                        {
+                            "type": "button",
+                            "text": {"type": "plain_text", "text": "❌ Cancel"},
+                            "style": "danger",
+                            "action_id": f"cancel_ciba_{message_ts}",
+                            "value": json.dumps({"ts": message_ts}),
+                        },
+                    ],
+                },
+            ]
+            say(blocks=confirm_blocks, text="High-stakes action detected. Confirm?")
+            return
+
+        # Not high-stakes - run directly
+        result = run_async(
+            run_orchestrator(
+                user_message=text,
+                refresh_token=refresh_token,
             )
         )
-        content = route_response.content.strip()
-        if content.startswith("```"):
-            content = content.split("\n", 1)[1].rsplit("```", 1)[0].strip()
-        routing = json.loads(content)
-        pre_agent = routing.get("agent", "none")
-        pre_action = routing.get("action", "none")
-    except Exception:
-        pre_agent = "none"
-        pre_action = "none"
 
-    # If high-stakes, confirm with user before proceeding
-    if pre_agent != "none" and is_high_stakes(pre_agent, pre_action):
-        from core.permissions import get_all_agents
+        response = result.get("response", "Something went wrong.")
+        agent = result.get("agent", "")
+        action = result.get("action", "")
+        steps = result.get("steps", [])
+        ciba_status = result.get("ciba_status")
 
-        agent_info = get_all_agents().get(pre_agent)
-        agent_display = pre_agent.replace("_", " ").title()
-        action_display = pre_action.replace("_", " ")
-
-        confirm_blocks = [
-            {
-                "type": "header",
-                "text": {"type": "plain_text", "text": "⚠️ High-Stakes Action Detected"},
-            },
-            {
-                "type": "section",
-                "text": {
-                    "type": "mrkdwn",
-                    "text": f"*{agent_display}* wants to perform: *{action_display}*\n\nThis action requires your approval via push notification. Do you want to proceed?",
-                },
-            },
-            {
-                "type": "actions",
-                "elements": [
-                    {
-                        "type": "button",
-                        "text": {"type": "plain_text", "text": "✅ Proceed"},
-                        "style": "primary",
-                        "action_id": f"confirm_ciba_{message_ts}",
-                        "value": json.dumps({"text": text, "ts": message_ts}),
-                    },
-                    {
-                        "type": "button",
-                        "text": {"type": "plain_text", "text": "❌ Cancel"},
-                        "style": "danger",
-                        "action_id": f"cancel_ciba_{message_ts}",
-                        "value": json.dumps({"ts": message_ts}),
-                    },
-                ],
-            },
-        ]
-        say(blocks=confirm_blocks, text="High-stakes action detected. Confirm?")
-        return
-
-    # Not high-stakes - run directly
-    result = run_async(
-        run_orchestrator(
-            user_message=text,
-            refresh_token=refresh_token,
+        # Log the full trace
+        log_audit(
+            "orchestrator_complete",
+            agent or "orchestrator",
+            action or "route",
+            "error" if result.get("error") else "success",
+            {"steps_count": len(steps), "response_length": len(response)},
         )
-    )
 
-    response = result.get("response", "Something went wrong.")
-    agent = result.get("agent", "")
-    action = result.get("action", "")
-    steps = result.get("steps", [])
-    ciba_status = result.get("ciba_status")
-
-    # Log the full trace
-    log_audit(
-        "orchestrator_complete",
-        agent or "orchestrator",
-        action or "route",
-        "error" if result.get("error") else "success",
-        {"steps_count": len(steps), "response_length": len(response)},
-    )
-
-    # Post the response with blocks
-    result_blocks = format_orchestrator_result_blocks(
-        response, agent, action, ciba_status
-    )
-    say(blocks=result_blocks, text=response)
-
-    # Post session summary in thread with blocks
-    if steps:
-        summary_blocks = format_session_summary_blocks(
-            steps=steps,
-            agent=agent,
-            action=action,
-            ciba_status=ciba_status,
-            result_summary=response,
+        # Post the response with blocks
+        result_blocks = format_orchestrator_result_blocks(
+            response, agent, action, ciba_status
         )
-        say(blocks=summary_blocks, text="Session Summary", thread_ts=message_ts)
+        say(blocks=result_blocks, text=response)
+
+        # Post session summary in thread with blocks
+        if steps:
+            summary_blocks = format_session_summary_blocks(
+                steps=steps,
+                agent=agent,
+                action=action,
+                ciba_status=ciba_status,
+                result_summary=response,
+            )
+            say(blocks=summary_blocks, text="Session Summary", thread_ts=message_ts)
+
+    except Exception as e:
+        logger.error(f"Unhandled error in handle_message: {e}", exc_info=True)
+        say("Something went wrong processing your request. Please try again.")
 
 
 @slack_app.event("app_mention")

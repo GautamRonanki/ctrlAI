@@ -29,7 +29,8 @@ async def list_emails(
     start = time.time()
     async with httpx.AsyncClient() as client:
         response = await client.get(
-            f"{GMAIL_BASE}/messages?maxResults={max_results}",
+            f"{GMAIL_BASE}/messages",
+            params={"maxResults": max_results},
             headers={"Authorization": f"Bearer {google_token}"},
         )
     latency = (time.time() - start) * 1000
@@ -137,7 +138,8 @@ async def search_emails(
     start = time.time()
     async with httpx.AsyncClient() as client:
         response = await client.get(
-            f"{GMAIL_BASE}/messages?q={query}&maxResults={max_results}",
+            f"{GMAIL_BASE}/messages",
+            params={"q": query, "maxResults": max_results},
             headers={"Authorization": f"Bearer {google_token}"},
         )
     latency = (time.time() - start) * 1000
@@ -166,7 +168,11 @@ async def _get_message_detail(
     start = time.time()
     async with httpx.AsyncClient() as client:
         response = await client.get(
-            f"{GMAIL_BASE}/messages/{message_id}?format=metadata&metadataHeaders=From&metadataHeaders=To&metadataHeaders=Subject&metadataHeaders=Date",
+            f"{GMAIL_BASE}/messages/{message_id}",
+            params={
+                "format": "metadata",
+                "metadataHeaders": ["From", "To", "Subject", "Date"],
+            },
             headers={"Authorization": f"Bearer {google_token}"},
         )
     latency = (time.time() - start) * 1000

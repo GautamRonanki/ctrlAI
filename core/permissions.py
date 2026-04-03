@@ -15,6 +15,7 @@ from pathlib import Path
 from typing import Optional
 
 from dotenv import load_dotenv
+from loguru import logger
 
 load_dotenv()
 
@@ -215,8 +216,8 @@ def _load_json(filepath: Path) -> dict:
     if filepath.exists():
         try:
             return json.loads(filepath.read_text())
-        except (json.JSONDecodeError, Exception):
-            pass
+        except (json.JSONDecodeError, OSError) as e:
+            logger.warning(f"Failed to load config file {filepath}: {e}")
     return {}
 
 
@@ -458,6 +459,42 @@ def update_high_stakes(agent_name: str, new_actions: list[str]) -> bool:
 
 
 # ============================================================
+# Action name normalization
+# The orchestrator uses singular action names (e.g. "send_email") while the
+# registry stores plural names (e.g. "send_emails"). Normalize before checking
+# so both forms are accepted without changing either the registry or the router.
+# ============================================================
+
+_SINGULAR_TO_PLURAL: dict[str, str] = {
+    "send_email": "send_emails",
+    "create_event": "create_events",
+    "post_comment": "post_comments",
+    "create_comment": "post_comments",
+    "delete_file": "delete_files",
+    "add_label": "add_labels",
+    "list_email": "list_emails",
+    "search_email": "search_emails",
+    "read_email": "read_emails",
+    "list_file": "list_files",
+    "read_file": "read_files",
+    "create_file": "create_files",
+    "search_file": "search_files",
+    "list_event": "list_events",
+    "read_event": "read_events",
+    "modify_event": "modify_events",
+    "list_repo": "list_repos",
+    "read_repo": "read_repos",
+    "list_issue": "list_issues",
+    "read_issue": "read_issues",
+}
+
+
+def _normalize_action(action: str) -> str:
+    """Return the canonical (plural) form of an action name."""
+    return _SINGULAR_TO_PLURAL.get(action, action)
+
+
+# ============================================================
 # Public API - Permission Checks
 # ============================================================
 
@@ -467,7 +504,10 @@ def check_scope_permission(
 ) -> bool:
     """Check if an agent has permission for a specific scope.
     Enforces: agent exists → agent active → rate limit → scope check.
+    Accepts both singular and plural scope names (e.g. "send_email" or "send_emails").
     """
+    requested_scope = _normalize_action(requested_scope)
+
     agent = get_agent(agent_name)
     if agent is None:
         log_permission_check(agent_name, requested_scope, False, "agent not found")
@@ -511,7 +551,10 @@ def check_scope_permission(
 
 
 def is_high_stakes(agent_name: str, action: str) -> bool:
-    """Check if an action requires CIBA approval."""
+    """Check if an action requires CIBA approval.
+    Accepts both singular and plural action names (e.g. "send_email" or "send_emails").
+    """
+    action = _normalize_action(action)
     agent = get_agent(agent_name)
     if agent is None:
         return False
