@@ -185,7 +185,9 @@ ctrlAI/
 
 - Single-user demo (no multi-organization support)
 - Six agents (production would support dynamic agent registration)
-- CIBA approval via email (production would use Guardian mobile push)
+- Single-user demo (no multi-organization support)
+- Six agents (production would support dynamic agent registration)
+- Permissions managed via dashboard UI (production would add natural language management)
 - Permissions managed via dashboard UI (production would add natural language management)
 
 ---
