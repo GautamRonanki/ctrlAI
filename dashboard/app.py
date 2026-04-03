@@ -1090,19 +1090,29 @@ elif page == "🔒 Security & Audit":
     with sim_col2:
         sim_repo = st.text_input("Repo", value="ctrlAI", key="sim_repo")
 
+    if "sim_test_mode" not in st.session_state:
+        st.session_state["sim_test_mode"] = False
+
     sim_btn_col1, sim_btn_col2, sim_btn_col3, sim_btn_col4 = st.columns([2, 2, 2, 4])
+    with sim_btn_col1:
+        run_scan_clicked = st.button(
+            "▶️ Run Scan", key="run_stale_scan", use_container_width=True
+        )
+    with sim_btn_col2:
+        run_act_clicked = st.button(
+            "▶️ Run & Act", key="run_stale_act", use_container_width=True
+        )
     with sim_btn_col3:
         test_mode = st.checkbox(
             "🧪 Test Mode",
             key="sim_test_mode",
             help="Sets threshold to 0 days so all issues appear stale",
         )
-    with sim_btn_col1:
-        if st.button("▶️ Run Scan", key="run_stale_scan", use_container_width=True):
-            show_stale_issue_dialog(sim_owner, sim_repo, execute=False, test=test_mode)
-    with sim_btn_col2:
-        if st.button("▶️ Run & Act", key="run_stale_act", use_container_width=True):
-            show_stale_issue_dialog(sim_owner, sim_repo, execute=True, test=test_mode)
+
+    if run_scan_clicked:
+        show_stale_issue_dialog(sim_owner, sim_repo, execute=False, test=test_mode)
+    if run_act_clicked:
+        show_stale_issue_dialog(sim_owner, sim_repo, execute=True, test=test_mode)
 
     st.divider()
 
