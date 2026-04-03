@@ -11,11 +11,6 @@
     ]
   },
   "calendar_agent": {
-    "gmail_agent": [
-      "read_email_context",
-      "send_email",
-      "send_alert_email"
-    ],
     "drive_agent": [
       "store_attachment",
       "delete_file"
@@ -37,8 +32,7 @@
     ],
     "drive_agent": [
       "store_attachment",
-      "delete_file",
-      "read_files"
+      "delete_file"
     ],
     "stale_issue_monitor": [
       "read_issues"

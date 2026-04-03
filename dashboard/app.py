@@ -189,47 +189,84 @@ def humanize_lower(text: str) -> str:
 # ============================================================
 # Header
 # ============================================================
-st.title("🛡️ ctrlAI")
-st.caption("Identity and Permission Control Plane for AI Agents")
+st.markdown(
+    """
+<div style="background: linear-gradient(135deg, #0d1117 0%, #161b22 50%, #1a1e2e 100%);
+            padding: 28px 32px; border-radius: 12px; margin-bottom: 20px;">
+    <div style="font-size: 2.2em; font-weight: 800; color: #ffffff; letter-spacing: -0.5px;">
+        🛡️ ctrlAI
+    </div>
+    <div style="font-size: 1.05em; color: #8b949e; margin-top: 4px;">
+        Identity and Permission Control Plane for AI Agents
+    </div>
+</div>
+""",
+    unsafe_allow_html=True,
+)
 
 # Quick stats bar
 entries = load_audit_log()
+from core.permissions import (
+    get_all_agents,
+    AgentStatus,
+    get_available_scopes,
+    get_available_high_stakes,
+    update_scopes,
+    update_high_stakes,
+    suspend_agent,
+    activate_agent,
+)
+
+active_count = sum(
+    1 for a in get_all_agents().values() if a.status == AgentStatus.ACTIVE
+)
+total_agents = len(get_all_agents())
+denied = len([e for e in entries if e["status"] == "denied"])
+ciba_count = len([e for e in entries if e["event_type"] == "ciba"])
+inter_agent = len(
+    [
+        e
+        for e in entries
+        if e["event_type"]
+        in ("inter_agent", "inter_agent_execution", "inter_agent_request")
+    ]
+)
+
+
+def metric_card(label, value, icon, color):
+    return f"""
+    <div style="background: white; border: 1px solid #e0e0e0; border-radius: 10px;
+                padding: 16px 18px; text-align: center; box-shadow: 0 1px 4px rgba(0,0,0,0.04);">
+        <div style="font-size: 0.8em; color: #888; text-transform: uppercase; letter-spacing: 0.5px;">{icon} {label}</div>
+        <div style="font-size: 1.8em; font-weight: 700; color: {color}; margin-top: 4px;">{value}</div>
+    </div>
+    """
+
+
 s1, s2, s3, s4, s5 = st.columns(5)
 with s1:
-    active_count = 0
-    from core.permissions import (
-        get_all_agents,
-        AgentStatus,
-        get_available_scopes,
-        get_available_high_stakes,
-        update_scopes,
-        update_high_stakes,
-        suspend_agent,
-        activate_agent,
+    st.markdown(
+        metric_card("Active Agents", f"{active_count}/{total_agents}", "🤖", "#2e7d32"),
+        unsafe_allow_html=True,
     )
-
-    for a in get_all_agents().values():
-        if a.status == AgentStatus.ACTIVE:
-            active_count += 1
-    st.metric("Active Agents", f"{active_count} / {len(get_all_agents())}")
 with s2:
-    st.metric("Total Events", len(entries))
-with s3:
-    denied = len([e for e in entries if e["status"] == "denied"])
-    st.metric("Denials", denied)
-with s4:
-    ciba_count = len([e for e in entries if e["event_type"] == "ciba"])
-    st.metric("CIBA Events", ciba_count)
-with s5:
-    inter_agent = len(
-        [
-            e
-            for e in entries
-            if e["event_type"]
-            in ("inter_agent", "inter_agent_execution", "inter_agent_request")
-        ]
+    st.markdown(
+        metric_card("Total Events", len(entries), "📊", "#1565c0"),
+        unsafe_allow_html=True,
     )
-    st.metric("Inter-Agent Events", inter_agent)
+with s3:
+    st.markdown(
+        metric_card("Denials", denied, "🚫", "#c62828" if denied > 0 else "#888"),
+        unsafe_allow_html=True,
+    )
+with s4:
+    st.markdown(
+        metric_card("CIBA Events", ciba_count, "🔐", "#e65100"), unsafe_allow_html=True
+    )
+with s5:
+    st.markdown(
+        metric_card("Inter-Agent", inter_agent, "🔗", "#6a1b9a"), unsafe_allow_html=True
+    )
 
 st.divider()
 
@@ -877,21 +914,9 @@ st.caption(
 
 from agents.security_report_agent import generate_security_report, send_alert_email
 
-report_col1, report_col2, report_col3 = st.columns([2, 2, 6])
 
-with report_col1:
-    run_report = st.button(
-        "▶️ Run Now", key="run_security_report", use_container_width=True
-    )
-with report_col2:
-    run_and_alert = st.button(
-        "▶️ Run & Alert",
-        key="run_and_alert",
-        use_container_width=True,
-        help="Generate report and send email alert if critical issues found",
-    )
-
-if run_report or run_and_alert:
+@st.dialog("🔒 Security Report", width="large")
+def show_security_report_dialog(send_alert: bool):
     with st.spinner("Security Report Agent running through permission pipeline..."):
         report_result = run_async(generate_security_report())
 
@@ -899,7 +924,6 @@ if run_report or run_and_alert:
         st.error(f"🚫 Blocked: {report_result['reason']}")
     elif report_result["status"] == "success":
         st.success("✅ Report generated successfully")
-        st.markdown(report_result["report"])
 
         # Show analysis metrics
         if (
@@ -921,8 +945,12 @@ if run_report or run_and_alert:
             with a5:
                 st.metric("Errors", analysis["error_count"])
 
+        st.divider()
+        st.markdown(report_result["report"])
+
         # Send alert email if critical and user clicked Run & Alert
-        if run_and_alert and report_result.get("has_critical"):
+        if send_alert and report_result.get("has_critical"):
+            st.divider()
             st.warning(
                 "⚠️ Critical issues detected - sending alert email via Gmail Agent..."
             )
@@ -963,10 +991,24 @@ if run_report or run_and_alert:
                 st.error(
                     "❌ No refresh token available. Log in via the web dashboard first."
                 )
-        elif run_and_alert and not report_result.get("has_critical"):
+        elif send_alert and not report_result.get("has_critical"):
             st.info("✅ No critical issues found - no alert email needed.")
     else:
         st.error(f"❌ Error: {report_result.get('reason', 'Unknown error')}")
+
+
+report_col1, report_col2, report_col3 = st.columns([2, 2, 6])
+with report_col1:
+    if st.button("▶️ Run Now", key="run_security_report", use_container_width=True):
+        show_security_report_dialog(send_alert=False)
+with report_col2:
+    if st.button(
+        "▶️ Run & Alert",
+        key="run_and_alert",
+        use_container_width=True,
+        help="Generate report and send email alert if critical issues found",
+    ):
+        show_security_report_dialog(send_alert=True)
 
 st.divider()
 
@@ -981,52 +1023,21 @@ st.caption(
 
 from agents.stale_issue_monitor import run_stale_issue_monitor
 
-# Repo configuration
-sim_col1, sim_col2, sim_col3 = st.columns([2, 2, 6])
-with sim_col1:
-    sim_owner = st.text_input("Owner", value="GautamRonanki", key="sim_owner")
-with sim_col2:
-    sim_repo = st.text_input("Repo", value="ctrlAI", key="sim_repo")
 
-sim_btn_col1, sim_btn_col2, sim_btn_col3, sim_btn_col4 = st.columns([2, 2, 2, 4])
-
-with sim_btn_col1:
-    run_scan = st.button("▶️ Run Scan", key="run_stale_scan", use_container_width=True)
-with sim_btn_col2:
-    run_and_act = st.button(
-        "▶️ Run & Act",
-        key="run_stale_act",
-        use_container_width=True,
-        help="Scan for stale issues and comment/label 2+ week stale issues (requires CIBA)",
-    )
-with sim_btn_col3:
-    test_mode = st.checkbox(
-        "🧪 Test Mode",
-        key="sim_test_mode",
-        help="Sets threshold to 0 days so all issues appear stale",
-    )
-
-if run_scan or run_and_act:
+@st.dialog("🔍 Stale Issue Monitor", width="large")
+def show_stale_issue_dialog(owner: str, repo: str, execute: bool, test: bool):
     with st.spinner(
         "Stale Issue Monitor running through permission pipeline → Token Vault → GitHub API..."
     ):
         result = run_async(
             run_stale_issue_monitor(
-                owner=sim_owner,
-                repo=sim_repo,
-                execute_actions=run_and_act,
+                owner=owner,
+                repo=repo,
+                execute_actions=execute,
                 ciba_approved=False,
-                stale_threshold_override=0 if test_mode else None,
+                stale_threshold_override=0 if test else None,
             )
         )
-    st.session_state["sim_result"] = result
-    st.session_state["sim_owner_val"] = sim_owner
-    st.session_state["sim_repo_val"] = sim_repo
-    st.session_state["sim_test_val"] = test_mode
-
-# Display result from session state
-if "sim_result" in st.session_state:
-    result = st.session_state["sim_result"]
 
     if result["status"] == "blocked":
         st.error(f"🚫 Blocked: {result['reason']}")
@@ -1039,26 +1050,28 @@ if "sim_result" in st.session_state:
         st.markdown(result.get("report", ""))
 
         if st.button(
-            "✅ Approve & Execute", key="sim_ciba_approve", use_container_width=True
+            "✅ Approve & Execute", key="sim_ciba_approve_dlg", use_container_width=True
         ):
             with st.spinner("Executing high-stakes actions with CIBA approval..."):
                 approved_result = run_async(
                     run_stale_issue_monitor(
-                        owner=st.session_state.get("sim_owner_val", "GautamRonanki"),
-                        repo=st.session_state.get("sim_repo_val", "ctrlAI"),
+                        owner=owner,
+                        repo=repo,
                         execute_actions=True,
                         ciba_approved=True,
-                        stale_threshold_override=0
-                        if st.session_state.get("sim_test_val")
-                        else None,
+                        stale_threshold_override=0 if test else None,
                     )
                 )
-            st.session_state["sim_result"] = approved_result
-            st.rerun()
+            if approved_result["status"] == "success":
+                st.success("✅ Actions executed successfully")
+                if approved_result.get("actions_taken"):
+                    for action in approved_result["actions_taken"]:
+                        st.markdown(
+                            f"  ✅ Issue #{action['issue']} - {action['action']}"
+                        )
 
     elif result["status"] == "success":
         st.success("✅ Scan complete")
-        st.markdown(result.get("report", ""))
 
         summary = result.get("summary", {})
         sm1, sm2, sm3, sm4, sm5 = st.columns(5)
@@ -1073,43 +1086,71 @@ if "sim_result" in st.session_state:
         with sm5:
             st.metric("2+ Weeks", summary.get("two_plus_weeks", 0))
 
+        st.divider()
+
         categories = result.get("categories", {})
 
         if categories.get("two_plus_weeks"):
-            st.subheader("🔴 2+ Weeks Inactive")
+            st.markdown("**🔴 2+ Weeks Inactive**")
             for issue in categories["two_plus_weeks"]:
                 st.markdown(
-                    f"  • **#{issue['number']}** - {issue['title']} "
-                    f"({issue['days_inactive']} days) - [{issue['author']}]({issue['url']})"
+                    f"  • **#{issue['number']}** - {issue['title']} ({issue['days_inactive']} days) - [{issue['author']}]({issue['url']})"
                 )
 
         if categories.get("two_weeks"):
-            st.subheader("🟠 2 Weeks Inactive")
+            st.markdown("**🟠 2 Weeks Inactive**")
             for issue in categories["two_weeks"]:
                 st.markdown(
-                    f"  • **#{issue['number']}** - {issue['title']} "
-                    f"({issue['days_inactive']} days) - [{issue['author']}]({issue['url']})"
+                    f"  • **#{issue['number']}** - {issue['title']} ({issue['days_inactive']} days) - [{issue['author']}]({issue['url']})"
                 )
 
         if categories.get("one_to_two_weeks"):
-            st.subheader("🟡 1-2 Weeks Inactive")
+            st.markdown("**🟡 1-2 Weeks Inactive**")
             for issue in categories["one_to_two_weeks"]:
                 st.markdown(
-                    f"  • **#{issue['number']}** - {issue['title']} "
-                    f"({issue['days_inactive']} days) - [{issue['author']}]({issue['url']})"
+                    f"  • **#{issue['number']}** - {issue['title']} ({issue['days_inactive']} days) - [{issue['author']}]({issue['url']})"
                 )
 
         if result.get("actions_taken"):
-            st.subheader("✅ Actions Taken")
+            st.divider()
+            st.markdown("**✅ Actions Taken**")
             for action in result["actions_taken"]:
                 st.markdown(f"  ✅ Issue #{action['issue']} - {action['action']}")
 
         if result.get("actions_blocked"):
-            st.subheader("❌ Actions Blocked")
+            st.divider()
+            st.markdown("**❌ Actions Blocked**")
             for action in result["actions_blocked"]:
                 st.markdown(
                     f"  ❌ Issue #{action['issue']} - {action['action']}: {action['error']}"
                 )
+
+
+sim_col1, sim_col2, sim_col3 = st.columns([2, 2, 6])
+with sim_col1:
+    sim_owner = st.text_input("Owner", value="GautamRonanki", key="sim_owner")
+with sim_col2:
+    sim_repo = st.text_input("Repo", value="ctrlAI", key="sim_repo")
+
+sim_btn_col1, sim_btn_col2, sim_btn_col3, sim_btn_col4 = st.columns([2, 2, 2, 4])
+with sim_btn_col1:
+    if st.button("▶️ Run Scan", key="run_stale_scan", use_container_width=True):
+        show_stale_issue_dialog(sim_owner, sim_repo, execute=False, test=False)
+with sim_btn_col2:
+    if st.button(
+        "▶️ Run & Act",
+        key="run_stale_act",
+        use_container_width=True,
+        help="Scan for stale issues and comment/label 2+ week stale issues (requires CIBA)",
+    ):
+        show_stale_issue_dialog(sim_owner, sim_repo, execute=True, test=False)
+with sim_btn_col3:
+    test_mode = st.checkbox(
+        "🧪 Test Mode",
+        key="sim_test_mode",
+        help="Sets threshold to 0 days so all issues appear stale",
+    )
+
 st.divider()
 
 # ============================================================
@@ -1185,39 +1226,131 @@ else:
 
     # Table
     if filtered:
-        df = pd.DataFrame(filtered[::-1])
-        df["timestamp"] = pd.to_datetime(df["timestamp"]).dt.strftime("%H:%M:%S")
-        df["event_type"] = df["event_type"].apply(humanize)
-        df["agent_name"] = df["agent_name"].apply(humanize)
-        df["action"] = df["action"].apply(humanize_lower)
-        df["status"] = df["status"].apply(humanize)
-        df["details"] = df["details"].apply(lambda d: json.dumps(d)[:80] if d else "")
 
-        display_cols = [
-            "timestamp",
-            "event_type",
-            "agent_name",
-            "action",
-            "status",
-            "details",
-        ]
-        col_config = {
-            "timestamp": st.column_config.TextColumn("Time"),
-            "event_type": st.column_config.TextColumn("Event Type"),
-            "agent_name": st.column_config.TextColumn("Agent"),
-            "action": st.column_config.TextColumn("Action"),
-            "status": st.column_config.TextColumn("Status"),
-            "details": st.column_config.TextColumn("Details"),
-        }
-        st.dataframe(
-            df[display_cols],
-            column_config=col_config,
-            use_container_width=True,
-            height=400,
-        )
+        def status_html(raw_status):
+            s = raw_status.replace("_", " ").title()
+            styles = {
+                "Allowed": ("✅", "#2e7d32", "#e8f5e9"),
+                "Success": ("✅", "#2e7d32", "#e8f5e9"),
+                "Denied": ("🚫", "#c62828", "#ffebee"),
+                "Error": ("⚠️", "#e65100", "#fff3e0"),
+                "Executing": ("🔄", "#1565c0", "#e3f2fd"),
+                "Blocked": ("🚫", "#c62828", "#ffebee"),
+            }
+            icon, fg, bg = styles.get(s, ("", "#555", "#f5f5f5"))
+            return f'<span style="background:{bg}; color:{fg}; padding:3px 10px; border-radius:12px; font-size:0.82em; font-weight:600;">{icon} {s}</span>'
+
+        rows_html = ""
+        for i, entry in enumerate(filtered[::-1][:100]):
+            bg = "#fafafa" if i % 2 == 0 else "#ffffff"
+            dt = pd.to_datetime(entry["timestamp"])
+            date_str = dt.strftime("%b %d")
+            ts = dt.strftime("%H:%M:%S")
+            evt = humanize(entry["event_type"])
+            agent = humanize(entry["agent_name"])
+            action = humanize_lower(entry["action"])
+            status = status_html(entry["status"])
+            details = (
+                json.dumps(entry.get("details", ""))[:60]
+                if entry.get("details")
+                else ""
+            )
+
+            rows_html += f"""
+            <tr style="background:{bg};">
+                <td style="padding:10px 12px; border-bottom:1px solid #eee; font-size:0.85em; color:#666;">{date_str}</td>
+                <td style="padding:10px 12px; border-bottom:1px solid #eee; font-size:0.85em; color:#666;">{ts}</td>
+                <td style="padding:10px 12px; border-bottom:1px solid #eee; font-size:0.85em;">{evt}</td>
+                <td style="padding:10px 12px; border-bottom:1px solid #eee; font-size:0.85em; font-weight:600;">{agent}</td>
+                <td style="padding:10px 12px; border-bottom:1px solid #eee; font-size:0.85em;">{action}</td>
+                <td style="padding:10px 12px; border-bottom:1px solid #eee;">{status}</td>
+                <td style="padding:10px 12px; border-bottom:1px solid #eee; font-size:0.78em; color:#888; max-width:200px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">{details}</td>
+            </tr>
+            """
+
+        table_html = f"""
+        <div style="max-height:420px; overflow-y:auto; border:1px solid #e0e0e0; border-radius:10px;">
+            <table style="width:100%; border-collapse:collapse;">
+                <thead>
+                    <tr style="background:#f0f2f6; position:sticky; top:0; z-index:1;">
+                        <th style="padding:12px; text-align:left; font-size:0.82em; color:#555; border-bottom:2px solid #ddd;">Date</th>
+                        <th style="padding:12px; text-align:left; font-size:0.82em; color:#555; border-bottom:2px solid #ddd;">Time</th>
+                        <th style="padding:12px; text-align:left; font-size:0.82em; color:#555; border-bottom:2px solid #ddd;">Event Type</th>
+                        <th style="padding:12px; text-align:left; font-size:0.82em; color:#555; border-bottom:2px solid #ddd;">Agent</th>
+                        <th style="padding:12px; text-align:left; font-size:0.82em; color:#555; border-bottom:2px solid #ddd;">Action</th>
+                        <th style="padding:12px; text-align:left; font-size:0.82em; color:#555; border-bottom:2px solid #ddd;">Status</th>
+                        <th style="padding:12px; text-align:left; font-size:0.82em; color:#555; border-bottom:2px solid #ddd;">Details</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {rows_html}
+                </tbody>
+            </table>
+        </div>
+        """
+
+        table_with_sort = f"""
+        <link href="https://fonts.googleapis.com/css2?family=Source+Sans+Pro:wght@400;600;700&display=swap" rel="stylesheet">
+        <style>
+            * {{
+                font-family: 'Source Sans Pro', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            }}
+            .audit-table th {{
+                cursor: pointer;
+                user-select: none;
+            }}
+            .audit-table th:hover {{
+                background: #e0e4ea !important;
+            }}
+            .sort-arrow {{
+                font-size: 0.7em;
+                margin-left: 4px;
+                color: #999;
+            }}
+        </style>
+        {table_html}
+        <script>
+        (function() {{
+            const table = document.querySelector('table');
+            if (!table) return;
+            const headers = table.querySelectorAll('th');
+            let sortCol = -1;
+            let sortAsc = true;
+
+            headers.forEach((th, i) => {{
+                th.addEventListener('click', () => {{
+                    if (sortCol === i) {{
+                        sortAsc = !sortAsc;
+                    }} else {{
+                        sortCol = i;
+                        sortAsc = true;
+                    }}
+                    // Update arrows
+                    headers.forEach(h => {{
+                        let existing = h.querySelector('.sort-arrow');
+                        if (existing) existing.remove();
+                    }});
+                    const arrow = document.createElement('span');
+                    arrow.className = 'sort-arrow';
+                    arrow.textContent = sortAsc ? ' ▲' : ' ▼';
+                    th.appendChild(arrow);
+
+                    const tbody = table.querySelector('tbody');
+                    const rows = Array.from(tbody.querySelectorAll('tr'));
+                    rows.sort((a, b) => {{
+                        const aText = a.children[i]?.textContent.trim() || '';
+                        const bText = b.children[i]?.textContent.trim() || '';
+                        return sortAsc ? aText.localeCompare(bText) : bText.localeCompare(aText);
+                    }});
+                    rows.forEach(r => tbody.appendChild(r));
+                }});
+            }});
+        }})();
+        </script>
+        """
+        components.html(table_with_sort, height=440, scrolling=True)
 
     st.divider()
-
 
 # ============================================================
 # Evaluation Results
@@ -1343,6 +1476,12 @@ with col_clear:
             AUDIT_LOG_PATH.write_text("")
             st.rerun()
 
-st.caption(
-    "ctrlAI - Identity and Permission Control Plane for AI Agents • Authorized to Act Hackathon • Auth0 Token Vault"
+st.markdown(
+    """
+<div style="text-align: center; padding: 20px 0 10px 0; color: #999; font-size: 0.82em;">
+    🛡️ <b>ctrlAI</b> · Identity and Permission Control Plane for AI Agents<br>
+    <span style="color: #bbb;">Authorized to Act Hackathon · Auth0 Token Vault · CIBA</span>
+</div>
+""",
+    unsafe_allow_html=True,
 )

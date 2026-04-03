@@ -1,52 +1,22 @@
 {
-  "timestamp": "2026-03-25T21:02:04.109674+00:00",
+  "timestamp": "2026-04-03T20:59:53.244592+00:00",
   "categories": {
     "permission": {
       "tests": [
         {
-          "id": "perm_gmail_read_allowed",
+          "id": "perm_gmail_agent_suspended_deny",
           "category": "permission",
-          "description": "Gmail Agent should have read access",
+          "description": "Gmail Agent is suspended - should deny read emails",
           "agent": "gmail_agent",
           "scope": "read_emails",
-          "expected": true,
-          "actual": true,
-          "passed": true
-        },
-        {
-          "id": "perm_gmail_send_allowed",
-          "category": "permission",
-          "description": "Gmail Agent should have send access",
-          "agent": "gmail_agent",
-          "scope": "send_emails",
-          "expected": true,
-          "actual": true,
-          "passed": true
-        },
-        {
-          "id": "perm_drive_cross_agent",
-          "category": "permission",
-          "description": "Gmail Agent should NOT have Drive access",
-          "agent": "gmail_agent",
-          "scope": "list_files",
           "expected": false,
           "actual": false,
           "passed": true
         },
         {
-          "id": "perm_github_cross_agent",
+          "id": "perm_drive_agent_list_files",
           "category": "permission",
-          "description": "Calendar Agent should NOT have GitHub access",
-          "agent": "calendar_agent",
-          "scope": "list_repos",
-          "expected": false,
-          "actual": false,
-          "passed": true
-        },
-        {
-          "id": "perm_drive_read_allowed",
-          "category": "permission",
-          "description": "Drive Agent should have read access",
+          "description": "Drive Agent has list files access",
           "agent": "drive_agent",
           "scope": "list_files",
           "expected": true,
@@ -54,46 +24,256 @@
           "passed": true
         },
         {
-          "id": "perm_github_repo_allowed",
+          "id": "perm_drive_agent_read_files",
           "category": "permission",
-          "description": "GitHub Agent should have repo access",
+          "description": "Drive Agent has read files access",
+          "agent": "drive_agent",
+          "scope": "read_files",
+          "expected": true,
+          "actual": true,
+          "passed": true
+        },
+        {
+          "id": "perm_drive_agent_create_files",
+          "category": "permission",
+          "description": "Drive Agent has create files access",
+          "agent": "drive_agent",
+          "scope": "create_files",
+          "expected": true,
+          "actual": true,
+          "passed": true
+        },
+        {
+          "id": "perm_drive_agent_delete_files",
+          "category": "permission",
+          "description": "Drive Agent has delete files access",
+          "agent": "drive_agent",
+          "scope": "delete_files",
+          "expected": true,
+          "actual": true,
+          "passed": true
+        },
+        {
+          "id": "perm_drive_agent_search_files",
+          "category": "permission",
+          "description": "Drive Agent has search files access",
+          "agent": "drive_agent",
+          "scope": "search_files",
+          "expected": true,
+          "actual": true,
+          "passed": true
+        },
+        {
+          "id": "perm_drive_agent_no_read_emails",
+          "category": "permission",
+          "description": "Drive Agent should NOT have read emails (belongs to Gmail Agent)",
+          "agent": "drive_agent",
+          "scope": "read_emails",
+          "expected": false,
+          "actual": false,
+          "passed": true
+        },
+        {
+          "id": "perm_calendar_agent_list_events",
+          "category": "permission",
+          "description": "Calendar Agent has list events access",
+          "agent": "calendar_agent",
+          "scope": "list_events",
+          "expected": true,
+          "actual": true,
+          "passed": true
+        },
+        {
+          "id": "perm_calendar_agent_read_events",
+          "category": "permission",
+          "description": "Calendar Agent has read events access",
+          "agent": "calendar_agent",
+          "scope": "read_events",
+          "expected": true,
+          "actual": true,
+          "passed": true
+        },
+        {
+          "id": "perm_calendar_agent_create_events",
+          "category": "permission",
+          "description": "Calendar Agent has create events access",
+          "agent": "calendar_agent",
+          "scope": "create_events",
+          "expected": true,
+          "actual": true,
+          "passed": true
+        },
+        {
+          "id": "perm_calendar_agent_modify_events",
+          "category": "permission",
+          "description": "Calendar Agent has modify events access",
+          "agent": "calendar_agent",
+          "scope": "modify_events",
+          "expected": true,
+          "actual": true,
+          "passed": true
+        },
+        {
+          "id": "perm_calendar_agent_no_read_emails",
+          "category": "permission",
+          "description": "Calendar Agent should NOT have read emails (belongs to Gmail Agent)",
+          "agent": "calendar_agent",
+          "scope": "read_emails",
+          "expected": false,
+          "actual": false,
+          "passed": true
+        },
+        {
+          "id": "perm_github_agent_list_repos",
+          "category": "permission",
+          "description": "Github Agent has list repos access",
           "agent": "github_agent",
           "scope": "list_repos",
           "expected": true,
           "actual": true,
           "passed": true
+        },
+        {
+          "id": "perm_github_agent_read_repos",
+          "category": "permission",
+          "description": "Github Agent has read repos access",
+          "agent": "github_agent",
+          "scope": "read_repos",
+          "expected": true,
+          "actual": true,
+          "passed": true
+        },
+        {
+          "id": "perm_github_agent_list_issues",
+          "category": "permission",
+          "description": "Github Agent has list issues access",
+          "agent": "github_agent",
+          "scope": "list_issues",
+          "expected": true,
+          "actual": true,
+          "passed": true
+        },
+        {
+          "id": "perm_github_agent_read_issues",
+          "category": "permission",
+          "description": "Github Agent has read issues access",
+          "agent": "github_agent",
+          "scope": "read_issues",
+          "expected": true,
+          "actual": true,
+          "passed": true
+        },
+        {
+          "id": "perm_github_agent_post_comments",
+          "category": "permission",
+          "description": "Github Agent has post comments access",
+          "agent": "github_agent",
+          "scope": "post_comments",
+          "expected": true,
+          "actual": true,
+          "passed": true
+        },
+        {
+          "id": "perm_github_agent_no_read_emails",
+          "category": "permission",
+          "description": "Github Agent should NOT have read emails (belongs to Gmail Agent)",
+          "agent": "github_agent",
+          "scope": "read_emails",
+          "expected": false,
+          "actual": false,
+          "passed": true
+        },
+        {
+          "id": "perm_security_report_agent_read_audit_trail",
+          "category": "permission",
+          "description": "Security Report Agent has read audit trail access",
+          "agent": "security_report_agent",
+          "scope": "read_audit_trail",
+          "expected": true,
+          "actual": true,
+          "passed": true
+        },
+        {
+          "id": "perm_security_report_agent_generate_reports",
+          "category": "permission",
+          "description": "Security Report Agent has generate reports access",
+          "agent": "security_report_agent",
+          "scope": "generate_reports",
+          "expected": true,
+          "actual": true,
+          "passed": true
+        },
+        {
+          "id": "perm_security_report_agent_no_read_emails",
+          "category": "permission",
+          "description": "Security Report Agent should NOT have read emails (belongs to Gmail Agent)",
+          "agent": "security_report_agent",
+          "scope": "read_emails",
+          "expected": false,
+          "actual": false,
+          "passed": true
+        },
+        {
+          "id": "perm_stale_issue_monitor_read_repos",
+          "category": "permission",
+          "description": "Stale Issue Monitor has read repos access",
+          "agent": "stale_issue_monitor",
+          "scope": "read_repos",
+          "expected": true,
+          "actual": true,
+          "passed": true
+        },
+        {
+          "id": "perm_stale_issue_monitor_read_issues",
+          "category": "permission",
+          "description": "Stale Issue Monitor has read issues access",
+          "agent": "stale_issue_monitor",
+          "scope": "read_issues",
+          "expected": true,
+          "actual": true,
+          "passed": true
+        },
+        {
+          "id": "perm_stale_issue_monitor_post_comments",
+          "category": "permission",
+          "description": "Stale Issue Monitor has post comments access",
+          "agent": "stale_issue_monitor",
+          "scope": "post_comments",
+          "expected": true,
+          "actual": true,
+          "passed": true
+        },
+        {
+          "id": "perm_stale_issue_monitor_add_labels",
+          "category": "permission",
+          "description": "Stale Issue Monitor has add labels access",
+          "agent": "stale_issue_monitor",
+          "scope": "add_labels",
+          "expected": true,
+          "actual": true,
+          "passed": true
+        },
+        {
+          "id": "perm_stale_issue_monitor_no_read_emails",
+          "category": "permission",
+          "description": "Stale Issue Monitor should NOT have read emails (belongs to Gmail Agent)",
+          "agent": "stale_issue_monitor",
+          "scope": "read_emails",
+          "expected": false,
+          "actual": false,
+          "passed": true
         }
       ],
-      "total": 6,
-      "passed": 6,
+      "total": 26,
+      "passed": 26,
       "failed": 0
     },
     "ciba": {
       "tests": [
         {
-          "id": "ciba_gmail_send",
+          "id": "ciba_drive_agent_delete_files",
           "category": "ciba",
-          "description": "Sending email should require CIBA approval",
-          "agent": "gmail_agent",
-          "action": "send_emails",
-          "expected_high_stakes": true,
-          "actual_high_stakes": true,
-          "passed": true
-        },
-        {
-          "id": "ciba_gmail_list",
-          "category": "ciba",
-          "description": "Listing emails should NOT require CIBA",
-          "agent": "gmail_agent",
-          "action": "list_emails",
-          "expected_high_stakes": false,
-          "actual_high_stakes": false,
-          "passed": true
-        },
-        {
-          "id": "ciba_drive_delete",
-          "category": "ciba",
-          "description": "Deleting a file should require CIBA approval",
+          "description": "Delete Files requires CIBA approval for Drive Agent",
           "agent": "drive_agent",
           "action": "delete_files",
           "expected_high_stakes": true,
@@ -101,9 +281,49 @@
           "passed": true
         },
         {
-          "id": "ciba_calendar_create",
+          "id": "ciba_drive_agent_list_files",
           "category": "ciba",
-          "description": "Creating an event should require CIBA approval",
+          "description": "List Files does NOT require CIBA approval for Drive Agent",
+          "agent": "drive_agent",
+          "action": "list_files",
+          "expected_high_stakes": false,
+          "actual_high_stakes": false,
+          "passed": true
+        },
+        {
+          "id": "ciba_drive_agent_search_files",
+          "category": "ciba",
+          "description": "Search Files does NOT require CIBA approval for Drive Agent",
+          "agent": "drive_agent",
+          "action": "search_files",
+          "expected_high_stakes": false,
+          "actual_high_stakes": false,
+          "passed": true
+        },
+        {
+          "id": "ciba_drive_agent_read_files",
+          "category": "ciba",
+          "description": "Read Files does NOT require CIBA approval for Drive Agent",
+          "agent": "drive_agent",
+          "action": "read_files",
+          "expected_high_stakes": false,
+          "actual_high_stakes": false,
+          "passed": true
+        },
+        {
+          "id": "ciba_drive_agent_create_files",
+          "category": "ciba",
+          "description": "Create Files does NOT require CIBA approval for Drive Agent",
+          "agent": "drive_agent",
+          "action": "create_files",
+          "expected_high_stakes": false,
+          "actual_high_stakes": false,
+          "passed": true
+        },
+        {
+          "id": "ciba_calendar_agent_create_events",
+          "category": "ciba",
+          "description": "Create Events requires CIBA approval for Calendar Agent",
           "agent": "calendar_agent",
           "action": "create_events",
           "expected_high_stakes": true,
@@ -111,9 +331,39 @@
           "passed": true
         },
         {
-          "id": "ciba_github_comment",
+          "id": "ciba_calendar_agent_modify_events",
           "category": "ciba",
-          "description": "Posting a GitHub comment should require CIBA",
+          "description": "Modify Events does NOT require CIBA approval for Calendar Agent",
+          "agent": "calendar_agent",
+          "action": "modify_events",
+          "expected_high_stakes": false,
+          "actual_high_stakes": false,
+          "passed": true
+        },
+        {
+          "id": "ciba_calendar_agent_list_events",
+          "category": "ciba",
+          "description": "List Events does NOT require CIBA approval for Calendar Agent",
+          "agent": "calendar_agent",
+          "action": "list_events",
+          "expected_high_stakes": false,
+          "actual_high_stakes": false,
+          "passed": true
+        },
+        {
+          "id": "ciba_calendar_agent_read_events",
+          "category": "ciba",
+          "description": "Read Events does NOT require CIBA approval for Calendar Agent",
+          "agent": "calendar_agent",
+          "action": "read_events",
+          "expected_high_stakes": false,
+          "actual_high_stakes": false,
+          "passed": true
+        },
+        {
+          "id": "ciba_github_agent_post_comments",
+          "category": "ciba",
+          "description": "Post Comments requires CIBA approval for Github Agent",
           "agent": "github_agent",
           "action": "post_comments",
           "expected_high_stakes": true,
@@ -121,27 +371,174 @@
           "passed": true
         },
         {
-          "id": "ciba_drive_list",
+          "id": "ciba_github_agent_list_repos",
           "category": "ciba",
-          "description": "Listing files should NOT require CIBA",
-          "agent": "drive_agent",
-          "action": "list_files",
+          "description": "List Repos does NOT require CIBA approval for Github Agent",
+          "agent": "github_agent",
+          "action": "list_repos",
           "expected_high_stakes": false,
           "actual_high_stakes": false,
           "passed": true
+        },
+        {
+          "id": "ciba_github_agent_list_issues",
+          "category": "ciba",
+          "description": "List Issues does NOT require CIBA approval for Github Agent",
+          "agent": "github_agent",
+          "action": "list_issues",
+          "expected_high_stakes": false,
+          "actual_high_stakes": false,
+          "passed": true
+        },
+        {
+          "id": "ciba_github_agent_read_repos",
+          "category": "ciba",
+          "description": "Read Repos does NOT require CIBA approval for Github Agent",
+          "agent": "github_agent",
+          "action": "read_repos",
+          "expected_high_stakes": false,
+          "actual_high_stakes": false,
+          "passed": true
+        },
+        {
+          "id": "ciba_github_agent_read_issues",
+          "category": "ciba",
+          "description": "Read Issues does NOT require CIBA approval for Github Agent",
+          "agent": "github_agent",
+          "action": "read_issues",
+          "expected_high_stakes": false,
+          "actual_high_stakes": false,
+          "passed": true
+        },
+        {
+          "id": "ciba_security_report_agent_send_alert_emails",
+          "category": "ciba",
+          "description": "Send Alert Emails does NOT require CIBA approval for Security Report Agent",
+          "agent": "security_report_agent",
+          "action": "send_alert_emails",
+          "expected_high_stakes": false,
+          "actual_high_stakes": false,
+          "passed": true
+        },
+        {
+          "id": "ciba_security_report_agent_generate_reports",
+          "category": "ciba",
+          "description": "Generate Reports does NOT require CIBA approval for Security Report Agent",
+          "agent": "security_report_agent",
+          "action": "generate_reports",
+          "expected_high_stakes": false,
+          "actual_high_stakes": false,
+          "passed": true
+        },
+        {
+          "id": "ciba_stale_issue_monitor_post_comments",
+          "category": "ciba",
+          "description": "Post Comments requires CIBA approval for Stale Issue Monitor",
+          "agent": "stale_issue_monitor",
+          "action": "post_comments",
+          "expected_high_stakes": true,
+          "actual_high_stakes": true,
+          "passed": true
+        },
+        {
+          "id": "ciba_stale_issue_monitor_add_labels",
+          "category": "ciba",
+          "description": "Add Labels requires CIBA approval for Stale Issue Monitor",
+          "agent": "stale_issue_monitor",
+          "action": "add_labels",
+          "expected_high_stakes": true,
+          "actual_high_stakes": true,
+          "passed": true
         }
       ],
-      "total": 6,
-      "passed": 6,
+      "total": 18,
+      "passed": 18,
       "failed": 0
     },
     "inter_agent": {
       "tests": [
         {
-          "id": "ia_gmail_drive_store",
+          "id": "ia_drive_agent_calendar_agent_check_availability_allow",
           "category": "inter_agent",
-          "description": "Gmail Agent should be allowed to store attachments in Drive",
-          "requesting": "gmail_agent",
+          "description": "Drive Agent \u2192 Calendar Agent: check availability should be allowed",
+          "requesting": "drive_agent",
+          "target": "calendar_agent",
+          "action": "check_availability",
+          "expected": true,
+          "actual": true,
+          "passed": true
+        },
+        {
+          "id": "ia_drive_agent_calendar_agent_create_event_allow",
+          "category": "inter_agent",
+          "description": "Drive Agent \u2192 Calendar Agent: create event should be allowed",
+          "requesting": "drive_agent",
+          "target": "calendar_agent",
+          "action": "create_event",
+          "expected": true,
+          "actual": true,
+          "passed": true
+        },
+        {
+          "id": "ia_drive_agent_calendar_agent_store_attachment_deny",
+          "category": "inter_agent",
+          "description": "Drive Agent \u2192 Calendar Agent: store attachment should be denied",
+          "requesting": "drive_agent",
+          "target": "calendar_agent",
+          "action": "store_attachment",
+          "expected": false,
+          "actual": false,
+          "passed": true
+        },
+        {
+          "id": "ia_drive_agent_github_agent_post_comments_allow",
+          "category": "inter_agent",
+          "description": "Drive Agent \u2192 Github Agent: post comments should be allowed",
+          "requesting": "drive_agent",
+          "target": "github_agent",
+          "action": "post_comments",
+          "expected": true,
+          "actual": true,
+          "passed": true
+        },
+        {
+          "id": "ia_drive_agent_github_agent_store_attachment_deny",
+          "category": "inter_agent",
+          "description": "Drive Agent \u2192 Github Agent: store attachment should be denied",
+          "requesting": "drive_agent",
+          "target": "github_agent",
+          "action": "store_attachment",
+          "expected": false,
+          "actual": false,
+          "passed": true
+        },
+        {
+          "id": "ia_drive_agent_security_report_agent_blocked",
+          "category": "inter_agent",
+          "description": "Drive Agent \u2192 Security Report Agent: should be fully blocked",
+          "requesting": "drive_agent",
+          "target": "security_report_agent",
+          "action": "store_attachment",
+          "expected": false,
+          "actual": false,
+          "passed": true
+        },
+        {
+          "id": "ia_drive_agent_stale_issue_monitor_blocked",
+          "category": "inter_agent",
+          "description": "Drive Agent \u2192 Stale Issue Monitor: should be fully blocked",
+          "requesting": "drive_agent",
+          "target": "stale_issue_monitor",
+          "action": "store_attachment",
+          "expected": false,
+          "actual": false,
+          "passed": true
+        },
+        {
+          "id": "ia_calendar_agent_drive_agent_store_attachment_allow",
+          "category": "inter_agent",
+          "description": "Calendar Agent \u2192 Drive Agent: store attachment should be allowed",
+          "requesting": "calendar_agent",
           "target": "drive_agent",
           "action": "store_attachment",
           "expected": true,
@@ -149,63 +546,382 @@
           "passed": true
         },
         {
-          "id": "ia_gmail_drive_delete",
+          "id": "ia_calendar_agent_drive_agent_delete_file_allow",
           "category": "inter_agent",
-          "description": "Gmail Agent should NOT be allowed to delete Drive files",
-          "requesting": "gmail_agent",
+          "description": "Calendar Agent \u2192 Drive Agent: delete file should be allowed",
+          "requesting": "calendar_agent",
           "target": "drive_agent",
           "action": "delete_file",
-          "expected": false,
-          "actual": false,
-          "passed": true
-        },
-        {
-          "id": "ia_calendar_gmail_read",
-          "category": "inter_agent",
-          "description": "Calendar Agent should be allowed to read email context",
-          "requesting": "calendar_agent",
-          "target": "gmail_agent",
-          "action": "read_email_context",
           "expected": true,
           "actual": true,
           "passed": true
         },
         {
-          "id": "ia_drive_gmail_send",
+          "id": "ia_calendar_agent_drive_agent_check_availability_deny",
           "category": "inter_agent",
-          "description": "Drive Agent should NOT be allowed to send emails",
-          "requesting": "drive_agent",
-          "target": "gmail_agent",
-          "action": "send_email",
+          "description": "Calendar Agent \u2192 Drive Agent: check availability should be denied",
+          "requesting": "calendar_agent",
+          "target": "drive_agent",
+          "action": "check_availability",
           "expected": false,
           "actual": false,
           "passed": true
         },
         {
-          "id": "ia_github_calendar_create",
+          "id": "ia_calendar_agent_github_agent_read_issues_allow",
           "category": "inter_agent",
-          "description": "GitHub Agent should NOT be allowed to create calendar events",
+          "description": "Calendar Agent \u2192 Github Agent: read issues should be allowed",
+          "requesting": "calendar_agent",
+          "target": "github_agent",
+          "action": "read_issues",
+          "expected": true,
+          "actual": true,
+          "passed": true
+        },
+        {
+          "id": "ia_calendar_agent_github_agent_post_comments_allow",
+          "category": "inter_agent",
+          "description": "Calendar Agent \u2192 Github Agent: post comments should be allowed",
+          "requesting": "calendar_agent",
+          "target": "github_agent",
+          "action": "post_comments",
+          "expected": true,
+          "actual": true,
+          "passed": true
+        },
+        {
+          "id": "ia_calendar_agent_github_agent_store_attachment_deny",
+          "category": "inter_agent",
+          "description": "Calendar Agent \u2192 Github Agent: store attachment should be denied",
+          "requesting": "calendar_agent",
+          "target": "github_agent",
+          "action": "store_attachment",
+          "expected": false,
+          "actual": false,
+          "passed": true
+        },
+        {
+          "id": "ia_calendar_agent_security_report_agent_generate_reports_allow",
+          "category": "inter_agent",
+          "description": "Calendar Agent \u2192 Security Report Agent: generate reports should be allowed",
+          "requesting": "calendar_agent",
+          "target": "security_report_agent",
+          "action": "generate_reports",
+          "expected": true,
+          "actual": true,
+          "passed": true
+        },
+        {
+          "id": "ia_calendar_agent_security_report_agent_store_attachment_deny",
+          "category": "inter_agent",
+          "description": "Calendar Agent \u2192 Security Report Agent: store attachment should be denied",
+          "requesting": "calendar_agent",
+          "target": "security_report_agent",
+          "action": "store_attachment",
+          "expected": false,
+          "actual": false,
+          "passed": true
+        },
+        {
+          "id": "ia_calendar_agent_stale_issue_monitor_read_issues_allow",
+          "category": "inter_agent",
+          "description": "Calendar Agent \u2192 Stale Issue Monitor: read issues should be allowed",
+          "requesting": "calendar_agent",
+          "target": "stale_issue_monitor",
+          "action": "read_issues",
+          "expected": true,
+          "actual": true,
+          "passed": true
+        },
+        {
+          "id": "ia_calendar_agent_stale_issue_monitor_store_attachment_deny",
+          "category": "inter_agent",
+          "description": "Calendar Agent \u2192 Stale Issue Monitor: store attachment should be denied",
+          "requesting": "calendar_agent",
+          "target": "stale_issue_monitor",
+          "action": "store_attachment",
+          "expected": false,
+          "actual": false,
+          "passed": true
+        },
+        {
+          "id": "ia_github_agent_drive_agent_store_attachment_allow",
+          "category": "inter_agent",
+          "description": "Github Agent \u2192 Drive Agent: store attachment should be allowed",
+          "requesting": "github_agent",
+          "target": "drive_agent",
+          "action": "store_attachment",
+          "expected": true,
+          "actual": true,
+          "passed": true
+        },
+        {
+          "id": "ia_github_agent_drive_agent_delete_file_allow",
+          "category": "inter_agent",
+          "description": "Github Agent \u2192 Drive Agent: delete file should be allowed",
+          "requesting": "github_agent",
+          "target": "drive_agent",
+          "action": "delete_file",
+          "expected": true,
+          "actual": true,
+          "passed": true
+        },
+        {
+          "id": "ia_github_agent_drive_agent_check_availability_deny",
+          "category": "inter_agent",
+          "description": "Github Agent \u2192 Drive Agent: check availability should be denied",
+          "requesting": "github_agent",
+          "target": "drive_agent",
+          "action": "check_availability",
+          "expected": false,
+          "actual": false,
+          "passed": true
+        },
+        {
+          "id": "ia_github_agent_calendar_agent_blocked",
+          "category": "inter_agent",
+          "description": "Github Agent \u2192 Calendar Agent: should be fully blocked",
           "requesting": "github_agent",
           "target": "calendar_agent",
-          "action": "create_event",
+          "action": "store_attachment",
           "expected": false,
           "actual": false,
           "passed": true
         },
         {
-          "id": "ia_github_gmail_read",
+          "id": "ia_github_agent_security_report_agent_generate_reports_allow",
           "category": "inter_agent",
-          "description": "GitHub Agent should be allowed to read email context",
+          "description": "Github Agent \u2192 Security Report Agent: generate reports should be allowed",
           "requesting": "github_agent",
-          "target": "gmail_agent",
-          "action": "read_email_context",
+          "target": "security_report_agent",
+          "action": "generate_reports",
           "expected": true,
           "actual": true,
+          "passed": true
+        },
+        {
+          "id": "ia_github_agent_security_report_agent_store_attachment_deny",
+          "category": "inter_agent",
+          "description": "Github Agent \u2192 Security Report Agent: store attachment should be denied",
+          "requesting": "github_agent",
+          "target": "security_report_agent",
+          "action": "store_attachment",
+          "expected": false,
+          "actual": false,
+          "passed": true
+        },
+        {
+          "id": "ia_github_agent_stale_issue_monitor_read_issues_allow",
+          "category": "inter_agent",
+          "description": "Github Agent \u2192 Stale Issue Monitor: read issues should be allowed",
+          "requesting": "github_agent",
+          "target": "stale_issue_monitor",
+          "action": "read_issues",
+          "expected": true,
+          "actual": true,
+          "passed": true
+        },
+        {
+          "id": "ia_github_agent_stale_issue_monitor_store_attachment_deny",
+          "category": "inter_agent",
+          "description": "Github Agent \u2192 Stale Issue Monitor: store attachment should be denied",
+          "requesting": "github_agent",
+          "target": "stale_issue_monitor",
+          "action": "store_attachment",
+          "expected": false,
+          "actual": false,
+          "passed": true
+        },
+        {
+          "id": "ia_security_report_agent_drive_agent_store_attachment_allow",
+          "category": "inter_agent",
+          "description": "Security Report Agent \u2192 Drive Agent: store attachment should be allowed",
+          "requesting": "security_report_agent",
+          "target": "drive_agent",
+          "action": "store_attachment",
+          "expected": true,
+          "actual": true,
+          "passed": true
+        },
+        {
+          "id": "ia_security_report_agent_drive_agent_check_availability_deny",
+          "category": "inter_agent",
+          "description": "Security Report Agent \u2192 Drive Agent: check availability should be denied",
+          "requesting": "security_report_agent",
+          "target": "drive_agent",
+          "action": "check_availability",
+          "expected": false,
+          "actual": false,
+          "passed": true
+        },
+        {
+          "id": "ia_security_report_agent_calendar_agent_blocked",
+          "category": "inter_agent",
+          "description": "Security Report Agent \u2192 Calendar Agent: should be fully blocked",
+          "requesting": "security_report_agent",
+          "target": "calendar_agent",
+          "action": "store_attachment",
+          "expected": false,
+          "actual": false,
+          "passed": true
+        },
+        {
+          "id": "ia_security_report_agent_github_agent_read_issues_allow",
+          "category": "inter_agent",
+          "description": "Security Report Agent \u2192 Github Agent: read issues should be allowed",
+          "requesting": "security_report_agent",
+          "target": "github_agent",
+          "action": "read_issues",
+          "expected": true,
+          "actual": true,
+          "passed": true
+        },
+        {
+          "id": "ia_security_report_agent_github_agent_post_comments_allow",
+          "category": "inter_agent",
+          "description": "Security Report Agent \u2192 Github Agent: post comments should be allowed",
+          "requesting": "security_report_agent",
+          "target": "github_agent",
+          "action": "post_comments",
+          "expected": true,
+          "actual": true,
+          "passed": true
+        },
+        {
+          "id": "ia_security_report_agent_github_agent_store_attachment_deny",
+          "category": "inter_agent",
+          "description": "Security Report Agent \u2192 Github Agent: store attachment should be denied",
+          "requesting": "security_report_agent",
+          "target": "github_agent",
+          "action": "store_attachment",
+          "expected": false,
+          "actual": false,
+          "passed": true
+        },
+        {
+          "id": "ia_security_report_agent_stale_issue_monitor_blocked",
+          "category": "inter_agent",
+          "description": "Security Report Agent \u2192 Stale Issue Monitor: should be fully blocked",
+          "requesting": "security_report_agent",
+          "target": "stale_issue_monitor",
+          "action": "store_attachment",
+          "expected": false,
+          "actual": false,
+          "passed": true
+        },
+        {
+          "id": "ia_stale_issue_monitor_drive_agent_store_attachment_allow",
+          "category": "inter_agent",
+          "description": "Stale Issue Monitor \u2192 Drive Agent: store attachment should be allowed",
+          "requesting": "stale_issue_monitor",
+          "target": "drive_agent",
+          "action": "store_attachment",
+          "expected": true,
+          "actual": true,
+          "passed": true
+        },
+        {
+          "id": "ia_stale_issue_monitor_drive_agent_delete_file_allow",
+          "category": "inter_agent",
+          "description": "Stale Issue Monitor \u2192 Drive Agent: delete file should be allowed",
+          "requesting": "stale_issue_monitor",
+          "target": "drive_agent",
+          "action": "delete_file",
+          "expected": true,
+          "actual": true,
+          "passed": true
+        },
+        {
+          "id": "ia_stale_issue_monitor_drive_agent_check_availability_deny",
+          "category": "inter_agent",
+          "description": "Stale Issue Monitor \u2192 Drive Agent: check availability should be denied",
+          "requesting": "stale_issue_monitor",
+          "target": "drive_agent",
+          "action": "check_availability",
+          "expected": false,
+          "actual": false,
+          "passed": true
+        },
+        {
+          "id": "ia_stale_issue_monitor_calendar_agent_check_availability_allow",
+          "category": "inter_agent",
+          "description": "Stale Issue Monitor \u2192 Calendar Agent: check availability should be allowed",
+          "requesting": "stale_issue_monitor",
+          "target": "calendar_agent",
+          "action": "check_availability",
+          "expected": true,
+          "actual": true,
+          "passed": true
+        },
+        {
+          "id": "ia_stale_issue_monitor_calendar_agent_create_event_allow",
+          "category": "inter_agent",
+          "description": "Stale Issue Monitor \u2192 Calendar Agent: create event should be allowed",
+          "requesting": "stale_issue_monitor",
+          "target": "calendar_agent",
+          "action": "create_event",
+          "expected": true,
+          "actual": true,
+          "passed": true
+        },
+        {
+          "id": "ia_stale_issue_monitor_calendar_agent_read_events_allow",
+          "category": "inter_agent",
+          "description": "Stale Issue Monitor \u2192 Calendar Agent: read events should be allowed",
+          "requesting": "stale_issue_monitor",
+          "target": "calendar_agent",
+          "action": "read_events",
+          "expected": true,
+          "actual": true,
+          "passed": true
+        },
+        {
+          "id": "ia_stale_issue_monitor_calendar_agent_store_attachment_deny",
+          "category": "inter_agent",
+          "description": "Stale Issue Monitor \u2192 Calendar Agent: store attachment should be denied",
+          "requesting": "stale_issue_monitor",
+          "target": "calendar_agent",
+          "action": "store_attachment",
+          "expected": false,
+          "actual": false,
+          "passed": true
+        },
+        {
+          "id": "ia_stale_issue_monitor_github_agent_post_comments_allow",
+          "category": "inter_agent",
+          "description": "Stale Issue Monitor \u2192 Github Agent: post comments should be allowed",
+          "requesting": "stale_issue_monitor",
+          "target": "github_agent",
+          "action": "post_comments",
+          "expected": true,
+          "actual": true,
+          "passed": true
+        },
+        {
+          "id": "ia_stale_issue_monitor_github_agent_store_attachment_deny",
+          "category": "inter_agent",
+          "description": "Stale Issue Monitor \u2192 Github Agent: store attachment should be denied",
+          "requesting": "stale_issue_monitor",
+          "target": "github_agent",
+          "action": "store_attachment",
+          "expected": false,
+          "actual": false,
+          "passed": true
+        },
+        {
+          "id": "ia_stale_issue_monitor_security_report_agent_blocked",
+          "category": "inter_agent",
+          "description": "Stale Issue Monitor \u2192 Security Report Agent: should be fully blocked",
+          "requesting": "stale_issue_monitor",
+          "target": "security_report_agent",
+          "action": "store_attachment",
+          "expected": false,
+          "actual": false,
           "passed": true
         }
       ],
-      "total": 6,
-      "passed": 6,
+      "total": 42,
+      "passed": 42,
       "failed": 0
     },
     "routing": {
@@ -221,7 +937,7 @@
           "agent_correct": true,
           "action_correct": true,
           "passed": true,
-          "latency_ms": 861.6
+          "latency_ms": 849.3
         },
         {
           "id": "route_gmail_search",
@@ -234,7 +950,7 @@
           "agent_correct": true,
           "action_correct": true,
           "passed": true,
-          "latency_ms": 930.7
+          "latency_ms": 719.5
         },
         {
           "id": "route_gmail_send",
@@ -247,7 +963,7 @@
           "agent_correct": true,
           "action_correct": true,
           "passed": true,
-          "latency_ms": 1018.7
+          "latency_ms": 920.5
         },
         {
           "id": "route_calendar_list",
@@ -260,7 +976,7 @@
           "agent_correct": true,
           "action_correct": true,
           "passed": true,
-          "latency_ms": 773.0
+          "latency_ms": 650.3
         },
         {
           "id": "route_drive_list",
@@ -273,7 +989,7 @@
           "agent_correct": true,
           "action_correct": true,
           "passed": true,
-          "latency_ms": 766.4
+          "latency_ms": 685.2
         },
         {
           "id": "route_drive_search",
@@ -286,7 +1002,7 @@
           "agent_correct": true,
           "action_correct": true,
           "passed": true,
-          "latency_ms": 1541.5
+          "latency_ms": 1225.1
         },
         {
           "id": "route_github_repos",
@@ -299,7 +1015,7 @@
           "agent_correct": true,
           "action_correct": true,
           "passed": true,
-          "latency_ms": 706.4
+          "latency_ms": 737.3
         },
         {
           "id": "route_github_issues",
@@ -312,7 +1028,7 @@
           "agent_correct": true,
           "action_correct": true,
           "passed": true,
-          "latency_ms": 765.7
+          "latency_ms": 891.3
         },
         {
           "id": "route_none",
@@ -325,7 +1041,7 @@
           "agent_correct": true,
           "action_correct": true,
           "passed": true,
-          "latency_ms": 873.1
+          "latency_ms": 728.0
         },
         {
           "id": "route_calendar_create",
@@ -338,7 +1054,7 @@
           "agent_correct": true,
           "action_correct": true,
           "passed": true,
-          "latency_ms": 1433.4
+          "latency_ms": 1744.0
         }
       ],
       "total": 10,
@@ -347,8 +1063,8 @@
     }
   },
   "summary": {
-    "total_tests": 28,
-    "total_passed": 28,
+    "total_tests": 96,
+    "total_passed": 96,
     "total_failed": 0,
     "pass_rate": 100.0
   }
