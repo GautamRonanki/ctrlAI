@@ -859,15 +859,17 @@ elif page == "🔗 Inter-Agent":
     (function wireMatrixClicks() {
         const doc = window.parent.document;
         let debounce;
+        let observer;
         function wire() {
+            const table = doc.querySelector('table');
+            if (!table) { if (observer) { observer.disconnect(); observer = null; } return; }
             const allBtns = Array.from(doc.querySelectorAll('button'));
             const gearBtns = allBtns.filter(b => b.textContent.trim() === '•');
             gearBtns.forEach(btn => {
-                const container = btn.closest('[data-testid="stHorizontalBlock"]');
-                if (container) { container.style.height = '0'; container.style.overflow = 'hidden'; container.style.padding = '0'; container.style.margin = '0'; }
+                if (btn.textContent.trim() !== '•') return;
+                const wrapper = btn.closest('[data-testid="stButton"]');
+                if (wrapper) { wrapper.style.display = 'none'; }
             });
-            const table = doc.querySelector('table');
-            if (!table) return;
             const rows = table.querySelectorAll('tr');
             let btnIndex = 0;
             for (let i = 1; i < rows.length; i++) {
@@ -885,7 +887,7 @@ elif page == "🔗 Inter-Agent":
                 }
             }
         }
-        const observer = new MutationObserver(() => { clearTimeout(debounce); debounce = setTimeout(wire, 150); });
+        observer = new MutationObserver(() => { clearTimeout(debounce); debounce = setTimeout(wire, 150); });
         observer.observe(doc.body, { childList: true, subtree: true });
         wire(); setTimeout(wire, 300); setTimeout(wire, 800);
     })();
