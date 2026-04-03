@@ -287,7 +287,7 @@ with st.sidebar:
     pages = [
         "📊 Dashboard",
         "🤖 Agent Registry",
-        "🔗 Intra-Agent",
+        "🔗 Inter-Agent",
         "🔒 Security & Audit",
         "🧪 Testing",
         "💰 LLM Usage",
@@ -346,8 +346,8 @@ if page == "📊 Dashboard":
     st.markdown(
         """
     <div style="background: linear-gradient(135deg, #0d1117 0%, #161b22 50%, #1a1e2e 100%);
-                padding: 28px 32px; border-radius: 12px; margin-bottom: 20px;">
-        <div style="font-size: 2.2em; font-weight: 800; color: #ffffff; letter-spacing: -0.5px;">
+                padding: 18px 24px; border-radius: 12px; margin-bottom: 20px;">
+        <div style="font-size: 1.8em; font-weight: 800; color: #ffffff; letter-spacing: -0.5px;">
             🛡️ ctrlAI
         </div>
         <div style="font-size: 1.05em; color: #8b949e; margin-top: 4px;">
@@ -714,13 +714,14 @@ elif page == "🤖 Agent Registry":
 
 
 # ============================================================
-# PAGE: Intra-Agent
+# PAGE: Inter-Agent
 # ============================================================
-elif page == "🔗 Intra-Agent":
-    st.header("🔗 Intra-Agent Permission Matrix")
+elif page == "🔗 Inter-Agent":
+    st.header("🔗 Inter-Agent Permission Matrix")
     st.caption(
         "Click any cell to manage the relationship between two agents. Enforced at runtime on every inter-agent communication."
     )
+    st.caption("Rows = requesting agent · Columns = target agent · ✅ = communication allowed · ❌ = blocked by policy")
 
     matrix = get_permission_matrix()
     agent_name_list = list(agents.keys())
@@ -829,9 +830,9 @@ elif page == "🔗 Intra-Agent":
         matrix_html_rows.append(f"<tr>{cells}</tr>")
 
     st.markdown(
-        f"""<table style="width:100%; border-collapse:collapse; border-radius:3px; overflow:hidden;">
+        f"""<div style="overflow-x: auto;"><table style="width:100%; border-collapse:collapse; border-radius:3px; overflow:hidden;">
         {"".join(matrix_html_rows)}
-    </table>""",
+    </table></div>""",
         unsafe_allow_html=True,
     )
 
@@ -899,17 +900,26 @@ elif page == "🔗 Intra-Agent":
 # ============================================================
 elif page == "🔒 Security & Audit":
     # Security Report Agent
-    st.header("🔒 Security Report Agent")
+    st.subheader("🔒 Security Report Agent")
     st.caption(
         "Autonomous agent - monitors the audit trail and alerts on security violations."
     )
 
-    from agents.security_report_agent import generate_security_report, send_alert_email
+    try:
+        from agents.security_report_agent import generate_security_report, send_alert_email
+    except ImportError as e:
+        st.error(f"Failed to load Security Report Agent: {e}")
+        generate_security_report = None
+        send_alert_email = None
 
     @st.dialog("🔒 Security Report", width="large")
     def show_security_report_dialog(send_alert_flag: bool):
-        with st.spinner("Security Report Agent running through permission pipeline..."):
-            report_result = run_async(generate_security_report())
+        try:
+            with st.spinner("Security Report Agent running through permission pipeline..."):
+                report_result = run_async(generate_security_report())
+        except Exception as e:
+            st.error(f"Security Report Agent failed: {e}")
+            return
 
         if report_result["status"] == "blocked":
             st.error(f"🚫 Blocked: {report_result['reason']}")
@@ -982,43 +992,55 @@ elif page == "🔒 Security & Audit":
         else:
             st.error(f"❌ Error: {report_result.get('reason', 'Unknown error')}")
 
-    report_col1, report_col2, report_col3 = st.columns([2, 2, 6])
-    with report_col1:
-        if st.button("▶️ Run Now", key="run_security_report", use_container_width=True):
+    if generate_security_report is not None:
+        report_col1, report_col2, report_col3 = st.columns([2, 2, 6])
+        with report_col1:
+            run_report_clicked = st.button("▶️ Run Now", key="run_security_report", use_container_width=True)
+        with report_col2:
+            run_alert_clicked = st.button(
+                "▶️ Run & Alert",
+                key="run_and_alert",
+                use_container_width=True,
+                help="Generate report and send email alert if critical issues found",
+            )
+
+        if run_report_clicked:
             show_security_report_dialog(send_alert_flag=False)
-    with report_col2:
-        if st.button(
-            "▶️ Run & Alert",
-            key="run_and_alert",
-            use_container_width=True,
-            help="Generate report and send email alert if critical issues found",
-        ):
+        if run_alert_clicked:
             show_security_report_dialog(send_alert_flag=True)
 
     st.divider()
 
     # Stale Issue Monitor
-    st.header("🔍 Stale Issue Monitor")
+    st.subheader("🔍 Stale Issue Monitor")
     st.caption(
         "Autonomous OAuth agent - retrieves its own GitHub token from Token Vault, monitors repos for stale issues."
     )
 
-    from agents.stale_issue_monitor import run_stale_issue_monitor
+    try:
+        from agents.stale_issue_monitor import run_stale_issue_monitor
+    except ImportError as e:
+        st.error(f"Failed to load Stale Issue Monitor agent: {e}")
+        run_stale_issue_monitor = None
 
     @st.dialog("🔍 Stale Issue Monitor", width="large")
     def show_stale_issue_dialog(owner: str, repo: str, execute: bool, test: bool):
-        with st.spinner(
-            "Stale Issue Monitor running through permission pipeline → Token Vault → GitHub API..."
-        ):
-            result = run_async(
-                run_stale_issue_monitor(
-                    owner=owner,
-                    repo=repo,
-                    execute_actions=execute,
-                    ciba_approved=False,
-                    stale_threshold_override=0 if test else None,
+        try:
+            with st.spinner(
+                "Stale Issue Monitor running through permission pipeline → Token Vault → GitHub API..."
+            ):
+                result = run_async(
+                    run_stale_issue_monitor(
+                        owner=owner,
+                        repo=repo,
+                        execute_actions=execute,
+                        ciba_approved=False,
+                        stale_threshold_override=0 if test else None,
+                    )
                 )
-            )
+        except Exception as e:
+            st.error(f"Stale Issue Monitor failed: {e}")
+            return
 
         if result["status"] == "blocked":
             st.error(f"🚫 Blocked: {result['reason']}")
@@ -1084,35 +1106,36 @@ elif page == "🔒 Security & Audit":
                         f"  • **#{issue['number']}** - {issue['title']} ({issue['days_inactive']} days)"
                     )
 
-    sim_col1, sim_col2, sim_col3 = st.columns([2, 2, 6])
-    with sim_col1:
-        sim_owner = st.text_input("Owner", value="GautamRonanki", key="sim_owner")
-    with sim_col2:
-        sim_repo = st.text_input("Repo", value="ctrlAI", key="sim_repo")
+    if run_stale_issue_monitor is not None:
+        sim_col1, sim_col2, sim_col3 = st.columns([2, 2, 6])
+        with sim_col1:
+            sim_owner = st.text_input("Owner", value="GautamRonanki", key="sim_owner")
+        with sim_col2:
+            sim_repo = st.text_input("Repo", value="ctrlAI", key="sim_repo")
 
-    if "sim_test_mode" not in st.session_state:
-        st.session_state["sim_test_mode"] = False
+        if "sim_test_mode" not in st.session_state:
+            st.session_state["sim_test_mode"] = False
 
-    sim_btn_col1, sim_btn_col2, sim_btn_col3, sim_btn_col4 = st.columns([2, 2, 2, 4])
-    with sim_btn_col1:
-        run_scan_clicked = st.button(
-            "▶️ Run Scan", key="run_stale_scan", use_container_width=True
-        )
-    with sim_btn_col2:
-        run_act_clicked = st.button(
-            "▶️ Run & Act", key="run_stale_act", use_container_width=True
-        )
-    with sim_btn_col3:
-        test_mode = st.checkbox(
-            "🧪 Test Mode",
-            key="sim_test_mode",
-            help="Sets threshold to 0 days so all issues appear stale",
-        )
+        sim_btn_col1, sim_btn_col2, sim_btn_col3, sim_btn_col4 = st.columns([2, 2, 2, 4])
+        with sim_btn_col1:
+            run_scan_clicked = st.button(
+                "▶️ Run Scan", key="run_stale_scan", use_container_width=True
+            )
+        with sim_btn_col2:
+            run_act_clicked = st.button(
+                "▶️ Run & Act", key="run_stale_act", use_container_width=True
+            )
+        with sim_btn_col3:
+            test_mode = st.checkbox(
+                "🧪 Test Mode",
+                key="sim_test_mode",
+                help="Sets threshold to 0 days so all issues appear stale",
+            )
 
-    if run_scan_clicked:
-        show_stale_issue_dialog(sim_owner, sim_repo, execute=False, test=test_mode)
-    if run_act_clicked:
-        show_stale_issue_dialog(sim_owner, sim_repo, execute=True, test=test_mode)
+        if run_scan_clicked:
+            show_stale_issue_dialog(sim_owner, sim_repo, execute=False, test=test_mode)
+        if run_act_clicked:
+            show_stale_issue_dialog(sim_owner, sim_repo, execute=True, test=test_mode)
 
     st.divider()
 
@@ -1158,7 +1181,7 @@ elif page == "🔒 Security & Audit":
             )
         with col4:
             st.markdown("<br>", unsafe_allow_html=True)
-            st.button("🧹 Clear", on_click=clear_filters)
+            st.button("🧹 Clear Filters", on_click=clear_filters)
 
         filtered = entries
         if selected_types:
@@ -1169,14 +1192,18 @@ elif page == "🔒 Security & Audit":
             filtered = [e for e in filtered if e["status"] in selected_statuses]
 
         m1, m2, m3, m4 = st.columns(4)
+        allowed_count = len([e for e in filtered if e["status"] == "allowed"])
+        denied_count = len([e for e in filtered if e["status"] == "denied"])
+        success_count = len([e for e in filtered if e["status"] == "success"])
+        error_count = len([e for e in filtered if e["status"] == "error"])
         with m1:
-            st.metric("Allowed", len([e for e in filtered if e["status"] == "allowed"]))
+            st.markdown(metric_card("Allowed", allowed_count, "✅", "#2e7d32"), unsafe_allow_html=True)
         with m2:
-            st.metric("Denied", len([e for e in filtered if e["status"] == "denied"]))
+            st.markdown(metric_card("Denied", denied_count, "🚫", "#c62828" if denied_count > 0 else "#888"), unsafe_allow_html=True)
         with m3:
-            st.metric("Success", len([e for e in filtered if e["status"] == "success"]))
+            st.markdown(metric_card("Success", success_count, "✅", "#2e7d32"), unsafe_allow_html=True)
         with m4:
-            st.metric("Errors", len([e for e in filtered if e["status"] == "error"]))
+            st.markdown(metric_card("Errors", error_count, "⚠️", "#e65100" if error_count > 0 else "#888"), unsafe_allow_html=True)
 
         if filtered:
 
@@ -1355,6 +1382,7 @@ elif page == "🧪 Testing":
         st.divider()
 
         categories = eval_results.get("categories", {})
+        st.caption("Each category validates a different layer of the ctrlAI governance pipeline. Green = enforcement working correctly.")
         cat_tabs = st.tabs(
             [
                 f"{humanize(cat)} ({cat_data['passed']}/{cat_data['total']})"
@@ -1451,6 +1479,25 @@ elif page == "💰 LLM Usage":
     st.caption(
         "Token usage tracked across all orchestrator routing calls. Cost estimated at GPT-4o-mini rates."
     )
+
+    st.divider()
+
+    total_tokens = stats["total_prompt_tokens"] + stats["total_completion_tokens"]
+    if total_tokens > 0:
+        st.progress(
+            stats["total_prompt_tokens"] / total_tokens,
+            text=f"Prompt: {stats['total_prompt_tokens']:,} / Completion: {stats['total_completion_tokens']:,}",
+        )
+
+    st.divider()
+
+    reset_col, _ = st.columns([1, 3])
+    with reset_col:
+        if st.button("🗑️ Reset Stats", use_container_width=True):
+            USAGE_STATS_PATH.write_text(
+                json.dumps({"total_calls": 0, "total_prompt_tokens": 0, "total_completion_tokens": 0})
+            )
+            st.rerun()
 
 
 # ============================================================

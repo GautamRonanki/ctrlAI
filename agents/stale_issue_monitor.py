@@ -82,8 +82,10 @@ def _categorize_issues(issues: list[dict], threshold_days: int = 7) -> dict:
             "labels": [l.get("name") for l in issue.get("labels", [])],
         }
 
-        if days_inactive >= two_week_threshold:
+        if days_inactive > two_week_threshold:
             categories["two_plus_weeks"].append(entry)
+        elif days_inactive == two_week_threshold:
+            categories["two_weeks"].append(entry)
         elif days_inactive >= threshold_days:
             categories["one_to_two_weeks"].append(entry)
         else:
