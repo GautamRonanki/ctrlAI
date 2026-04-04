@@ -793,31 +793,9 @@ async def send_rate_limit_alert(agent_name: str, limit: int, window: int):
         return
 
     # Get Gmail token
-    refresh_token = None
-    token_store_path = CONFIG_DIR / "token_store.json"
-    if not token_store_path.exists():
-        log_audit(
-            "security_alert",
-            agent_name,
-            "rate_limit_alert_failed",
-            "error",
-            {"reason": "token_store.json not found"},
-        )
-        return
+    from core.token_service import get_google_token, get_stored_refresh_token
 
-    try:
-        token_data = json.loads(token_store_path.read_text())
-        refresh_token = token_data.get("refresh_token", "")
-    except (json.JSONDecodeError, Exception):
-        log_audit(
-            "security_alert",
-            agent_name,
-            "rate_limit_alert_failed",
-            "error",
-            {"reason": "failed to read token_store.json"},
-        )
-        return
-
+    refresh_token = get_stored_refresh_token()
     if not refresh_token:
         log_audit(
             "security_alert",
@@ -827,8 +805,6 @@ async def send_rate_limit_alert(agent_name: str, limit: int, window: int):
             {"reason": "no refresh token"},
         )
         return
-
-    from core.token_service import get_google_token
 
     gmail_token = await get_google_token(refresh_token)
     if not gmail_token:

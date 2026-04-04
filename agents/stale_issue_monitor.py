@@ -9,7 +9,6 @@ It is not triggered by employees - it runs on schedule or manual trigger.
 import json
 import time
 from datetime import datetime, timezone, timedelta
-from pathlib import Path
 
 import httpx
 from loguru import logger
@@ -17,7 +16,7 @@ from loguru import logger
 from core.permissions import check_scope_permission, is_agent_active, is_high_stakes
 from core.logger import log_audit, log_api_call
 from core.llm import get_llm, call_llm
-from core.token_service import get_github_token
+from core.token_service import get_github_token, get_stored_refresh_token
 
 GITHUB_BASE = "https://api.github.com"
 AGENT_NAME = "stale_issue_monitor"
@@ -222,19 +221,11 @@ async def run_stale_issue_monitor(
         }
 
     # ── Token Vault retrieval ──
-    token_store_path = Path(__file__).parent.parent / "config" / "token_store.json"
-    refresh_token = None
-    if token_store_path.exists():
-        try:
-            token_data = json.loads(token_store_path.read_text())
-            refresh_token = token_data.get("refresh_token", "")
-        except (json.JSONDecodeError, Exception):
-            pass
-
+    refresh_token = get_stored_refresh_token()
     if not refresh_token:
         return {
             "status": "error",
-            "reason": "No refresh token available. Log in via the web dashboard first.",
+            "reason": "No refresh token available. Set REFRESH_TOKEN or log in via the web dashboard first.",
         }
 
     log_audit("token_vault", AGENT_NAME, "retrieve_github_token", "requesting", {})

@@ -5,6 +5,8 @@ Agents call get_google_token/get_github_token - Token Vault handles the rest.
 """
 
 import os
+import json
+from pathlib import Path
 
 import httpx
 from dotenv import load_dotenv
@@ -15,6 +17,21 @@ load_dotenv()
 AUTH0_DOMAIN = os.getenv("AUTH0_DOMAIN")
 AUTH0_CLIENT_ID = os.getenv("AUTH0_CLIENT_ID")
 AUTH0_CLIENT_SECRET = os.getenv("AUTH0_CLIENT_SECRET")
+TOKEN_STORE_PATH = Path(__file__).parent.parent / "config" / "token_store.json"
+
+
+def get_stored_refresh_token() -> str:
+    """Load the persisted refresh token, falling back to REFRESH_TOKEN."""
+    if TOKEN_STORE_PATH.exists():
+        try:
+            data = json.loads(TOKEN_STORE_PATH.read_text())
+            refresh_token = data.get("refresh_token", "")
+            if refresh_token:
+                return refresh_token
+        except (json.JSONDecodeError, OSError):
+            pass
+
+    return os.getenv("REFRESH_TOKEN", "")
 
 
 async def get_token_via_vault(refresh_token: str, connection: str) -> dict | None:
@@ -49,16 +66,22 @@ async def get_token_via_vault(refresh_token: str, connection: str) -> dict | Non
     return data
 
 
-async def get_google_token(refresh_token: str) -> str | None:
+async def get_google_token(refresh_token: str = "") -> str | None:
     """Get a Google access token via Token Vault exchange."""
+    refresh_token = refresh_token or get_stored_refresh_token()
+    if not refresh_token:
+        return None
     result = await get_token_via_vault(refresh_token, "google-oauth2")
     if result:
         return result.get("access_token")
     return None
 
 
-async def get_github_token(refresh_token: str) -> str | None:
+async def get_github_token(refresh_token: str = "") -> str | None:
     """Get a GitHub access token via Token Vault exchange."""
+    refresh_token = refresh_token or get_stored_refresh_token()
+    if not refresh_token:
+        return None
     result = await get_token_via_vault(refresh_token, "github")
     if result:
         return result.get("access_token")

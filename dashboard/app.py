@@ -1219,19 +1219,10 @@ elif page == "🔒 Security & Audit":
                 st.warning(
                     "⚠️ Critical issues detected - sending alert email via Gmail Agent..."
                 )
-                refresh_token = None
-                token_store_path = (
-                    Path(__file__).parent.parent / "config" / "token_store.json"
-                )
-                if token_store_path.exists():
-                    try:
-                        token_data = json.loads(token_store_path.read_text())
-                        refresh_token = token_data.get("refresh_token", "")
-                    except (json.JSONDecodeError, Exception):
-                        pass
-                if refresh_token:
-                    from core.token_service import get_google_token
+                from core.token_service import get_google_token, get_stored_refresh_token
 
+                refresh_token = get_stored_refresh_token()
+                if refresh_token:
                     gmail_token = run_async(get_google_token(refresh_token))
                     if gmail_token:
                         email_result = run_async(
