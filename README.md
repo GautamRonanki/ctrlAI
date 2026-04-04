@@ -52,7 +52,7 @@ Built on **Auth0 Token Vault** and **CIBA** for the [Authorized to Act](https://
 
        ┌──────────────────────────────────────────────────────────────┐
        │              Streamlit Admin Dashboard                       │
-       │  Agent Registry · Intra-Agent Matrix · Audit Log             │
+       │  Agent Registry · Inter-Agent Matrix · Audit Log             │
        │  Security Reports · Dynamic Evals · LLM Usage                │
        └──────────────────────────────────────────────────────────────┘
 ```
