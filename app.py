@@ -446,6 +446,39 @@ async def connect_github_complete(request: Request, connect_code: str):
     if response.status_code in (200, 201):
         request.session["github_connected"] = True
         logger.info("GitHub Connected Account linked!")
+
+        # Fetch GitHub username via Token Vault and save to token store
+        refresh_token = request.session.get("refresh_token")
+        if refresh_token:
+            try:
+                token_data = await get_token_via_vault(refresh_token, "github")
+                if token_data:
+                    github_token = token_data.get("access_token")
+                    async with httpx.AsyncClient() as client:
+                        gh_user_resp = await client.get(
+                            "https://api.github.com/user",
+                            headers={
+                                "Authorization": f"Bearer {github_token}",
+                                "Accept": "application/vnd.github+json",
+                            },
+                        )
+                    if gh_user_resp.status_code == 200:
+                        github_username = gh_user_resp.json().get("login", "")
+                        if github_username:
+                            import json
+                            token_store_path = Path(__file__).parent / "config" / "token_store.json"
+                            store_data = {}
+                            if token_store_path.exists():
+                                try:
+                                    store_data = json.loads(token_store_path.read_text())
+                                except (json.JSONDecodeError, OSError):
+                                    pass
+                            store_data["github_username"] = github_username
+                            token_store_path.write_text(json.dumps(store_data))
+                            logger.info(f"Saved GitHub username: {github_username}")
+            except Exception as e:
+                logger.warning(f"Failed to fetch GitHub username: {e}")
+
         return RedirectResponse("/")
     logger.error(f"GitHub connection failed: {response.text}")
     return JSONResponse(

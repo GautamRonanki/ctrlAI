@@ -67,6 +67,10 @@ from core.permissions import (
     check_scope_permission,
     check_inter_agent_permission,
     AVAILABLE_SCOPES,
+    grant_temporary_scope,
+    get_active_temp_grants,
+    get_all_active_temp_grants,
+    revoke_temp_grant,
 )
 
 # ── Paths ──
@@ -393,7 +397,7 @@ if page == "📊 Dashboard":
     tour_col1, tour_col2, tour_col3 = st.columns(3)
     with tour_col1:
         st.markdown("""
-        <div style="border:1px solid #e0e0e0; border-radius:10px; padding:16px; text-align:center; background:#f8fffe;">
+        <div style="border:1px solid #e0e0e0; border-radius:10px; padding:16px; text-align:center; background:#f8fffe; height:160px; display:flex; flex-direction:column; justify-content:center; margin-bottom:16px;">
             <div style="font-size:1.5em;">1️⃣</div>
             <div style="font-weight:700; margin-top:4px;">Ask</div>
             <div style="font-size:0.82em; color:#666; margin-top:4px;">Employees message the Slack bot in natural language. The orchestrator routes to the right agent.</div>
@@ -401,7 +405,7 @@ if page == "📊 Dashboard":
         """, unsafe_allow_html=True)
     with tour_col2:
         st.markdown("""
-        <div style="border:1px solid #e0e0e0; border-radius:10px; padding:16px; text-align:center; background:#fff8f8;">
+        <div style="border:1px solid #e0e0e0; border-radius:10px; padding:16px; text-align:center; background:#fff8f8; height:160px; display:flex; flex-direction:column; justify-content:center; margin-bottom:16px;">
             <div style="font-size:1.5em;">2️⃣</div>
             <div style="font-weight:700; margin-top:4px;">Govern</div>
             <div style="font-size:0.82em; color:#666; margin-top:4px;">Every request passes through permission gates. Denied actions are blocked. High-stakes actions require approval.</div>
@@ -409,7 +413,7 @@ if page == "📊 Dashboard":
         """, unsafe_allow_html=True)
     with tour_col3:
         st.markdown("""
-        <div style="border:1px solid #e0e0e0; border-radius:10px; padding:16px; text-align:center; background:#f8f8ff;">
+        <div style="border:1px solid #e0e0e0; border-radius:10px; padding:16px; text-align:center; background:#f8f8ff; height:160px; display:flex; flex-direction:column; justify-content:center; margin-bottom:16px;">
             <div style="font-size:1.5em;">3️⃣</div>
             <div style="font-weight:700; margin-top:4px;">Audit</div>
             <div style="font-size:0.82em; color:#666; margin-top:4px;">Every action is logged. Admins see what happened, who did it, and whether it was allowed or denied.</div>
@@ -463,9 +467,12 @@ if page == "📊 Dashboard":
     st.subheader("Agent Overview")
     try:
         _token_store = json.loads((Path(__file__).parent.parent / "config" / "token_store.json").read_text())
-        _google_email = _token_store.get("email", "Not connected")
+        _google_email = _token_store.get("user_email", _token_store.get("email", "Not connected"))
+        _github_username = _token_store.get("github_username", "Not connected")
     except Exception:
         _google_email = "Not connected"
+        _github_username = "Not connected"
+    _all_temp_grants = get_all_active_temp_grants()
     agent_list = list(agents.items())
     for row_start in range(0, len(agent_list), 3):
         row_agents = agent_list[row_start : row_start + 3]
@@ -484,9 +491,19 @@ if page == "📊 Dashboard":
                 if agent.oauth_provider == "google":
                     _connected_as = f"Connected as: {_google_email}"
                 elif agent.oauth_provider == "github":
-                    _connected_as = "Connected as: GautamRonanki"
+                    _connected_as = f"Connected as: {_github_username}"
                 else:
                     _connected_as = "No external connection"
+
+                _agent_temp_grants = [g for g in _all_temp_grants if g["agent_name"] == name]
+                _temp_html = ""
+                if _agent_temp_grants:
+                    _temp_lines = []
+                    for _tg in _agent_temp_grants:
+                        _tg_label = SCOPE_LABELS.get(_tg["scope"], _tg["scope"])
+                        _tg_exp = pd.to_datetime(_tg["expires_at"]).strftime("%H:%M")
+                        _temp_lines.append(f"⏳ {_tg_label} (until {_tg_exp})")
+                    _temp_html = f'<div style="font-size:0.8em; color:#b8860b; margin-top:3px;">{"  ·  ".join(_temp_lines)}</div>'
 
                 st.markdown(
                     f"""
@@ -495,6 +512,7 @@ if page == "📊 Dashboard":
                     <div style="font-weight:700; font-size:1em;">{status_emoji} {humanize(name)}</div>
                     <div style="font-size:0.82em; color:#888; margin-top:4px;">{provider} · {scope_count} scopes · {hs_count} CIBA</div>
                     <div style="font-size:0.8em; color:#666; margin-top:3px;">{_connected_as}</div>
+                    {_temp_html}
                 </div>
                 """,
                     unsafe_allow_html=True,
@@ -811,6 +829,55 @@ elif page == "🤖 Agent Registry":
             for i, row in edited.iterrows()
             if row["Requires Approval (CIBA)"] and all_keys[i] in available_hs
         ]
+
+        st.divider()
+        st.markdown("**Temporary Access Grants**")
+        st.caption("Grant temporary scope access that auto-expires. Use for time-limited tasks.")
+
+        active_grants = get_active_temp_grants(agent_name)
+        if active_grants:
+            for grant in active_grants:
+                exp = pd.to_datetime(grant["expires_at"]).strftime("%H:%M:%S UTC")
+                scope_label = SCOPE_LABELS.get(grant["scope"], grant["scope"])
+                gcol, rcol = st.columns([5, 1])
+                with gcol:
+                    st.markdown(f"⏳ **{scope_label}** — expires at {exp}")
+                with rcol:
+                    if st.button("Revoke", key=f"dlg_revoke_{agent_name}_{grant['scope']}"):
+                        revoke_temp_grant(agent_name, grant["scope"])
+                        st.rerun()
+        else:
+            st.caption("No active temporary grants.")
+
+        available_for_grant = [s for s in get_available_scopes(agent_name) if s not in current_scopes]
+        if available_for_grant:
+            grant_cols = st.columns([3, 2, 2])
+            with grant_cols[0]:
+                selected_scope = st.selectbox(
+                    "Scope",
+                    available_for_grant,
+                    format_func=lambda s: SCOPE_LABELS.get(s, s),
+                    key=f"temp_scope_{agent_name}",
+                )
+            with grant_cols[1]:
+                duration = st.number_input(
+                    "Minutes",
+                    min_value=5,
+                    max_value=480,
+                    value=30,
+                    key=f"temp_duration_{agent_name}",
+                )
+            with grant_cols[2]:
+                st.markdown("<br>", unsafe_allow_html=True)
+                if st.button(
+                    "⏱️ Grant Temporary Access",
+                    key=f"temp_grant_{agent_name}",
+                    use_container_width=True,
+                ):
+                    grant_temporary_scope(agent_name, selected_scope, duration)
+                    st.rerun()
+        else:
+            st.caption("All available scopes are already permanently granted.")
 
         st.divider()
         if st.button(

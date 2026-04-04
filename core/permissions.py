@@ -210,6 +210,7 @@ STATUS_FILE = CONFIG_DIR / "agent_status.json"
 SCOPES_FILE = CONFIG_DIR / "agent_scopes.json"
 HIGH_STAKES_FILE = CONFIG_DIR / "agent_high_stakes.json"
 INTER_AGENT_FILE = CONFIG_DIR / "inter_agent_matrix.json"
+TEMP_GRANTS_FILE = CONFIG_DIR / "temp_grants.json"
 
 
 def _load_json(filepath: Path) -> dict:
@@ -459,6 +460,122 @@ def update_high_stakes(agent_name: str, new_actions: list[str]) -> bool:
 
 
 # ============================================================
+# Temporary Access Grants
+# ============================================================
+
+from datetime import datetime, timezone, timedelta
+
+
+def _load_temp_grants() -> list[dict]:
+    """Load all temp grants from file."""
+    if TEMP_GRANTS_FILE.exists():
+        try:
+            data = json.loads(TEMP_GRANTS_FILE.read_text())
+            if isinstance(data, list):
+                return data
+        except (json.JSONDecodeError, OSError):
+            pass
+    return []
+
+
+def _save_temp_grants(grants: list[dict]):
+    """Save temp grants to file."""
+    TEMP_GRANTS_FILE.parent.mkdir(parents=True, exist_ok=True)
+    TEMP_GRANTS_FILE.write_text(json.dumps(grants, indent=2))
+
+
+def grant_temporary_scope(agent_name: str, scope: str, duration_minutes: int) -> bool:
+    """Grant a temporary scope to an agent that auto-expires."""
+    agent = AGENT_REGISTRY.get(agent_name)
+    if agent is None:
+        return False
+    now = datetime.now(timezone.utc)
+    expires_at = now + timedelta(minutes=duration_minutes)
+    grants = _load_temp_grants()
+    # Remove any existing grant for the same agent+scope
+    grants = [g for g in grants if not (g["agent_name"] == agent_name and g["scope"] == scope)]
+    grants.append({
+        "agent_name": agent_name,
+        "scope": scope,
+        "granted_at": now.isoformat(),
+        "expires_at": expires_at.isoformat(),
+    })
+    _save_temp_grants(grants)
+    log_audit(
+        "admin_action",
+        agent_name,
+        "grant_temp_scope",
+        "success",
+        {"scope": scope, "duration_minutes": duration_minutes, "expires_at": expires_at.isoformat()},
+    )
+    return True
+
+
+def get_active_temp_grants(agent_name: str) -> list[dict]:
+    """Return active (non-expired) temporary grants for an agent. Cleans up expired grants."""
+    grants = _load_temp_grants()
+    now = datetime.now(timezone.utc)
+    active = []
+    changed = False
+    remaining = []
+    for g in grants:
+        try:
+            expires = datetime.fromisoformat(g["expires_at"])
+        except (KeyError, ValueError):
+            changed = True
+            continue
+        if expires > now:
+            remaining.append(g)
+            if g["agent_name"] == agent_name:
+                active.append(g)
+        else:
+            changed = True
+    if changed:
+        _save_temp_grants(remaining)
+    return active
+
+
+def get_all_active_temp_grants() -> list[dict]:
+    """Return all active (non-expired) temporary grants across all agents."""
+    grants = _load_temp_grants()
+    now = datetime.now(timezone.utc)
+    active = []
+    remaining = []
+    changed = False
+    for g in grants:
+        try:
+            expires = datetime.fromisoformat(g["expires_at"])
+        except (KeyError, ValueError):
+            changed = True
+            continue
+        if expires > now:
+            remaining.append(g)
+            active.append(g)
+        else:
+            changed = True
+    if changed:
+        _save_temp_grants(remaining)
+    return active
+
+
+def revoke_temp_grant(agent_name: str, scope: str) -> bool:
+    """Remove a specific temporary grant."""
+    grants = _load_temp_grants()
+    new_grants = [g for g in grants if not (g["agent_name"] == agent_name and g["scope"] == scope)]
+    if len(new_grants) == len(grants):
+        return False
+    _save_temp_grants(new_grants)
+    log_audit(
+        "admin_action",
+        agent_name,
+        "revoke_temp_scope",
+        "success",
+        {"scope": scope},
+    )
+    return True
+
+
+# ============================================================
 # Action name normalization
 # The orchestrator uses singular action names (e.g. "send_email") while the
 # registry stores plural names (e.g. "send_emails"). Normalize before checking
@@ -541,13 +658,26 @@ def check_scope_permission(
         return False
 
     allowed = requested_scope in agent.permitted_scopes
+    if allowed:
+        log_permission_check(agent_name, requested_scope, True, "scope permitted")
+        return True
+
+    # Check temporary grants as fallback
+    temp_grants = get_active_temp_grants(agent_name)
+    for grant in temp_grants:
+        if grant["scope"] == requested_scope:
+            log_permission_check(
+                agent_name, requested_scope, True, "temp_grant_permitted"
+            )
+            return True
+
     log_permission_check(
         agent_name,
         requested_scope,
-        allowed,
-        "scope permitted" if allowed else "scope not in agent's registered permissions",
+        False,
+        "scope not in agent's registered permissions",
     )
-    return allowed
+    return False
 
 
 def is_high_stakes(agent_name: str, action: str) -> bool:

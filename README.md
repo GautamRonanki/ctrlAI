@@ -15,7 +15,7 @@ Built on **Auth0 Token Vault** and **CIBA** for the [Authorized to Act](https://
 - Every agent has a registered identity in Auth0 with explicitly scoped permissions
 - Agents cannot access services outside their scopes, enforced at runtime, not just policy
 - Inter-agent communication is governed by a permission matrix. Agents can only talk to other agents they are authorized to reach
-- High-stakes actions require human approval via CIBA before execution
+- High-stakes actions require human approval before execution (Auth0 CIBA with Guardian push for Slack-triggered actions, admin approval buttons for dashboard-triggered autonomous actions)
 - Permissions can be changed in real time. Revoke access and it takes effect on the next request
 - Every action is audited with a full trace visible in the admin dashboard
 - Dynamic evaluation suite generates 100+ tests from the live permission state
@@ -81,7 +81,7 @@ Three agents share a single Google OAuth connection, one uses GitHub OAuth, but 
 A runtime-enforced matrix defines which agent can communicate with which other agent, and what actions it can request. Any request not explicitly permitted is blocked and logged. Both the requesting agent and the receiving agent enforce the boundary independently.
 
 ### CIBA (Client-Initiated Backchannel Authentication)
-Every high-stakes action (sending email, deleting files, posting public comments, creating events) triggers an async authorization request via Auth0. The agent pauses, the admin receives an approval request, and only proceeds after explicit confirmation.
+When an employee triggers a high-stakes action through Slack (sending email, deleting files, posting public comments, creating events), the system initiates a real Auth0 CIBA flow with Guardian push notifications. The agent pauses, the admin receives a push notification on their phone, and only proceeds after explicit approval. For dashboard-triggered autonomous actions (Security Report Agent, Stale Issue Monitor), admin approval is handled through the dashboard UI before execution.
 
 ### Dynamic Evaluation Suite
 Tests are generated dynamically from the live permission state, not hardcoded. Change a permission on the dashboard, run evals, and the test suite adapts automatically. Covers permission enforcement, CIBA configuration, inter-agent matrix, and LLM routing accuracy.
