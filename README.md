@@ -200,11 +200,24 @@ This is a hackathon demonstration of the ctrlAI architecture. The following simp
 
 ---
 
-## The Vision
+## The Vision: From Demo to Production
 
-ctrlAI is a governance layer for agent-driven organizations. Today it governs six agents across two OAuth providers. The architecture is designed to scale to hundreds of agents across any number of providers, each with a registered identity, scoped permissions, governed communication boundaries, and a complete audit trail.
+ctrlAI is a governance layer for agent-driven organizations. Here is how the current demo maps to production scale:
 
-As AI agents proliferate in organizations, the attack surface created by ungoverned agent identities becomes a critical security risk. ctrlAI is the missing piece that makes agent-driven organizations trustworthy.
+| Dimension | Demo (Today) | Production |
+|-----------|-------------|------------|
+| Users | 1 admin user | Multi-tenant, per-user agent scoping |
+| Agents | 6 registered agents | Dynamic agent registration, hundreds of agents |
+| OAuth Providers | 2 (Google, GitHub) | Any OAuth provider via Token Vault |
+| Credentials | 1 shared refresh token | Per-agent credential isolation via Token Vault multi-user |
+| CIBA Approval | Guardian push + dashboard buttons | Guardian push + SMS + email fallbacks |
+| Inter-Agent Matrix | 6x6 static matrix | Dynamic policy engine with role-based rules |
+| Audit | Local JSONL file | SIEM integration, log rotation, compliance export |
+| Deployment | Local + Streamlit Cloud | Kubernetes, horizontal scaling, HA |
+
+The architecture is designed for this expansion. The agent registry pattern, file-based persistence layer, and separation of core governance from agent implementations mean that scaling from 6 agents to 600 requires adding agent definitions, not rewriting the governance engine.
+
+The core thesis: as AI agents proliferate in organizations, the attack surface created by ungoverned agent identities becomes a critical security risk. ctrlAI is the missing piece that makes agent-driven organizations trustworthy.
 
 ---
 

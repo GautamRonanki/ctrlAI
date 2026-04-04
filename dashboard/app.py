@@ -388,6 +388,34 @@ if page == "📊 Dashboard":
         unsafe_allow_html=True,
     )
 
+    st.markdown("")
+
+    tour_col1, tour_col2, tour_col3 = st.columns(3)
+    with tour_col1:
+        st.markdown("""
+        <div style="border:1px solid #e0e0e0; border-radius:10px; padding:16px; text-align:center; background:#f8fffe;">
+            <div style="font-size:1.5em;">1️⃣</div>
+            <div style="font-weight:700; margin-top:4px;">Ask</div>
+            <div style="font-size:0.82em; color:#666; margin-top:4px;">Employees message the Slack bot in natural language. The orchestrator routes to the right agent.</div>
+        </div>
+        """, unsafe_allow_html=True)
+    with tour_col2:
+        st.markdown("""
+        <div style="border:1px solid #e0e0e0; border-radius:10px; padding:16px; text-align:center; background:#fff8f8;">
+            <div style="font-size:1.5em;">2️⃣</div>
+            <div style="font-weight:700; margin-top:4px;">Govern</div>
+            <div style="font-size:0.82em; color:#666; margin-top:4px;">Every request passes through permission gates. Denied actions are blocked. High-stakes actions require approval.</div>
+        </div>
+        """, unsafe_allow_html=True)
+    with tour_col3:
+        st.markdown("""
+        <div style="border:1px solid #e0e0e0; border-radius:10px; padding:16px; text-align:center; background:#f8f8ff;">
+            <div style="font-size:1.5em;">3️⃣</div>
+            <div style="font-weight:700; margin-top:4px;">Audit</div>
+            <div style="font-size:0.82em; color:#666; margin-top:4px;">Every action is logged. Admins see what happened, who did it, and whether it was allowed or denied.</div>
+        </div>
+        """, unsafe_allow_html=True)
+
     # Metric cards
     denied = len([e for e in entries if e["status"] == "denied"])
     ciba_count = len([e for e in entries if e["event_type"] == "ciba"])
@@ -433,6 +461,11 @@ if page == "📊 Dashboard":
 
     # Agent overview cards (compact)
     st.subheader("Agent Overview")
+    try:
+        _token_store = json.loads((Path(__file__).parent.parent / "config" / "token_store.json").read_text())
+        _google_email = _token_store.get("email", "Not connected")
+    except Exception:
+        _google_email = "Not connected"
     agent_list = list(agents.items())
     for row_start in range(0, len(agent_list), 3):
         row_agents = agent_list[row_start : row_start + 3]
@@ -448,12 +481,20 @@ if page == "📊 Dashboard":
                 scope_count = len(agent.permitted_scopes)
                 hs_count = len(agent.high_stakes_actions)
 
+                if agent.oauth_provider == "google":
+                    _connected_as = f"Connected as: {_google_email}"
+                elif agent.oauth_provider == "github":
+                    _connected_as = "Connected as: GautamRonanki"
+                else:
+                    _connected_as = "No external connection"
+
                 st.markdown(
                     f"""
                 <div style="border:1px solid #e0e0e0; border-radius:10px; padding:16px;
                             margin-bottom:12px; background:{"#fff" if is_active else "#fff5f5"}; box-shadow:0 1px 4px rgba(0,0,0,0.04);">
                     <div style="font-weight:700; font-size:1em;">{status_emoji} {humanize(name)}</div>
                     <div style="font-size:0.82em; color:#888; margin-top:4px;">{provider} · {scope_count} scopes · {hs_count} CIBA</div>
+                    <div style="font-size:0.8em; color:#666; margin-top:3px;">{_connected_as}</div>
                 </div>
                 """,
                     unsafe_allow_html=True,
