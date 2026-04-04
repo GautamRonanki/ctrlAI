@@ -484,6 +484,7 @@ if page == "📊 Dashboard":
     st.divider()
     st.subheader("🛡️ Security Enforcement Demo")
     st.caption("Click any scenario to see how ctrlAI handles permission violations in real time.")
+    st.caption("Slack-triggered high-stakes actions use real Auth0 CIBA with Guardian push notifications. Dashboard-triggered autonomous actions use admin approval buttons.")
 
     demo_col1, demo_col2, demo_col3 = st.columns(3)
 
@@ -1058,7 +1059,7 @@ elif page == "🔒 Security & Audit":
     # Security Report Agent
     st.subheader("🔒 Security Report Agent")
     st.caption(
-        "Autonomous agent - monitors the audit trail and alerts on security violations."
+        "Autonomous agent — monitors the audit trail and alerts on security violations. Dashboard-triggered with admin approval."
     )
 
     try:
@@ -1170,7 +1171,7 @@ elif page == "🔒 Security & Audit":
     # Stale Issue Monitor
     st.subheader("🔍 Stale Issue Monitor")
     st.caption(
-        "Autonomous OAuth agent - retrieves its own GitHub token from Token Vault, monitors repos for stale issues."
+        "Autonomous OAuth agent — retrieves its own GitHub token from Token Vault, monitors repos for stale issues. High-stakes actions (commenting, labeling) require admin approval via dashboard before execution."
     )
 
     try:
