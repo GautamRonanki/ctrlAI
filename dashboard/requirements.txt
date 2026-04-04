@@ -2,3 +2,8 @@ streamlit==1.41.1
 pandas==2.3.3
 loguru==0.7.3
 python-dotenv==1.0.1
+httpx==0.28.1
+langchain-core==0.3.83
+langchain-openai==0.3.0
+langgraph==0.5.4
+openai==1.58.1
