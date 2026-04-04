@@ -2,7 +2,7 @@
 
 **IAM for AI Agents**
 
-A Slack bot and admin dashboard that governs Gmail, Drive, Calendar, and GitHub agents with Auth0 Token Vault, CIBA human approval, audit trails, and inter-agent permission controls.
+Identity and permission control plane for AI agents, demonstrated through a Slack bot and admin dashboard that governs Gmail, Drive, Calendar, and GitHub agents with Auth0 Token Vault, CIBA human approval, audit trails, and inter-agent permission controls.
 
 Built for the [Authorized to Act](https://authorizedtoact.devpost.com/) hackathon.
 
