@@ -6,7 +6,7 @@ Identity and permission control plane for AI agents, demonstrated through a Slac
 
 Built for the [Authorized to Act](https://authorizedtoact.devpost.com/) hackathon.
 
-> **[Live Demo](TODO)** · **[Demo Video](TODO)** · **[Devpost Submission](TODO)**
+> **[Live Demo](https://ctrlai.streamlit.app)** · **[Demo Video](TODO)** · **[Devpost Submission](TODO)**
 
 ---
 
