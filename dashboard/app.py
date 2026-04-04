@@ -323,6 +323,7 @@ with st.sidebar:
         "🤖 Agent Registry",
         "🔗 Inter-Agent",
         "🔒 Security & Audit",
+        "🤖 Autonomous Agents",
         "🧪 Testing",
         "💰 LLM Usage",
     ]
@@ -1276,134 +1277,6 @@ elif page == "🔒 Security & Audit":
 
     st.divider()
 
-    # Stale Issue Monitor
-    st.subheader("🔍 Stale Issue Monitor")
-    st.caption(
-        "Autonomous OAuth agent — retrieves its own GitHub token from Token Vault, monitors repos for stale issues. High-stakes actions (commenting, labeling) require admin approval via dashboard before execution."
-    )
-
-    try:
-        from agents.stale_issue_monitor import run_stale_issue_monitor
-    except ImportError as e:
-        st.error(f"Failed to load Stale Issue Monitor agent: {e}")
-        run_stale_issue_monitor = None
-
-    @st.dialog("🔍 Stale Issue Monitor", width="large")
-    def show_stale_issue_dialog(owner: str, repo: str, execute: bool, test: bool):
-        try:
-            with st.spinner(
-                "Stale Issue Monitor running through permission pipeline → Token Vault → GitHub API..."
-            ):
-                result = run_async(
-                    run_stale_issue_monitor(
-                        owner=owner,
-                        repo=repo,
-                        execute_actions=execute,
-                        ciba_approved=False,
-                        stale_threshold_override=0 if test else None,
-                    )
-                )
-        except Exception as e:
-            st.error(f"Stale Issue Monitor failed: {e}")
-            return
-
-        if result["status"] == "blocked":
-            st.error(f"🚫 Blocked: {result['reason']}")
-        elif result["status"] == "error":
-            st.error(f"❌ Error: {result['reason']}")
-        elif result["status"] == "awaiting_ciba":
-            st.warning(f"🔐 {result['reason']}")
-            st.markdown(result.get("report", ""))
-            if st.button(
-                "✅ Approve & Execute",
-                key="sim_ciba_approve_dlg",
-                use_container_width=True,
-            ):
-                with st.spinner("Executing high-stakes actions with CIBA approval..."):
-                    approved_result = run_async(
-                        run_stale_issue_monitor(
-                            owner=owner,
-                            repo=repo,
-                            execute_actions=True,
-                            ciba_approved=True,
-                            stale_threshold_override=0 if test else None,
-                        )
-                    )
-                if approved_result["status"] == "success":
-                    st.success("✅ Actions executed successfully")
-                    if approved_result.get("actions_taken"):
-                        for action in approved_result["actions_taken"]:
-                            st.markdown(
-                                f"  ✅ Issue #{action['issue']} - {action['action']}"
-                            )
-        elif result["status"] == "success":
-            st.success("✅ Scan complete")
-            summary = result.get("summary", {})
-            sm1, sm2, sm3, sm4, sm5 = st.columns(5)
-            with sm1:
-                st.metric("Total Issues", summary.get("total_issues", 0))
-            with sm2:
-                st.metric("Active", summary.get("active", 0))
-            with sm3:
-                st.metric("1-2 Weeks", summary.get("one_to_two_weeks", 0))
-            with sm4:
-                st.metric("2 Weeks", summary.get("two_weeks", 0))
-            with sm5:
-                st.metric("2+ Weeks", summary.get("two_plus_weeks", 0))
-            st.divider()
-            categories = result.get("categories", {})
-            if categories.get("two_plus_weeks"):
-                st.markdown("**🔴 2+ Weeks Inactive**")
-                for issue in categories["two_plus_weeks"]:
-                    st.markdown(
-                        f"  • **#{issue['number']}** - {issue['title']} ({issue['days_inactive']} days)"
-                    )
-            if categories.get("two_weeks"):
-                st.markdown("**🟠 2 Weeks Inactive**")
-                for issue in categories["two_weeks"]:
-                    st.markdown(
-                        f"  • **#{issue['number']}** - {issue['title']} ({issue['days_inactive']} days)"
-                    )
-            if categories.get("one_to_two_weeks"):
-                st.markdown("**🟡 1-2 Weeks Inactive**")
-                for issue in categories["one_to_two_weeks"]:
-                    st.markdown(
-                        f"  • **#{issue['number']}** - {issue['title']} ({issue['days_inactive']} days)"
-                    )
-
-    if run_stale_issue_monitor is not None:
-        sim_col1, sim_col2, sim_col3 = st.columns([2, 2, 6])
-        with sim_col1:
-            sim_owner = st.text_input("Owner", value="GautamRonanki", key="sim_owner")
-        with sim_col2:
-            sim_repo = st.text_input("Repo", value="ctrlAI", key="sim_repo")
-
-        if "sim_test_mode" not in st.session_state:
-            st.session_state["sim_test_mode"] = False
-
-        sim_btn_col1, sim_btn_col2, sim_btn_col3, sim_btn_col4 = st.columns([2, 2, 2, 4])
-        with sim_btn_col1:
-            run_scan_clicked = st.button(
-                "▶️ Run Scan", key="run_stale_scan", use_container_width=True
-            )
-        with sim_btn_col2:
-            run_act_clicked = st.button(
-                "▶️ Run & Act", key="run_stale_act", use_container_width=True
-            )
-        with sim_btn_col3:
-            test_mode = st.checkbox(
-                "🧪 Test Mode",
-                key="sim_test_mode",
-                help="Sets threshold to 0 days so all issues appear stale",
-            )
-
-        if run_scan_clicked:
-            show_stale_issue_dialog(sim_owner, sim_repo, execute=False, test=test_mode)
-        if run_act_clicked:
-            show_stale_issue_dialog(sim_owner, sim_repo, execute=True, test=test_mode)
-
-    st.divider()
-
     # Audit Log
     st.header("📋 Audit Log")
 
@@ -1581,6 +1454,140 @@ elif page == "🔒 Security & Audit":
             if AUDIT_LOG_PATH.exists():
                 AUDIT_LOG_PATH.write_text("")
                 st.rerun()
+
+
+# ============================================================
+# PAGE: Autonomous Agents
+# ============================================================
+elif page == "🤖 Autonomous Agents":
+    st.header("🤖 Autonomous Agents")
+    st.caption("Agents that operate independently, retrieving their own OAuth tokens from Token Vault and executing on schedule or manual trigger.")
+
+    # Stale Issue Monitor
+    st.subheader("🔍 Stale Issue Monitor")
+    st.caption(
+        "Autonomous OAuth agent — retrieves its own GitHub token from Token Vault, monitors repos for stale issues. High-stakes actions (commenting, labeling) require admin approval via dashboard before execution."
+    )
+
+    try:
+        from agents.stale_issue_monitor import run_stale_issue_monitor
+    except ImportError as e:
+        st.error(f"Failed to load Stale Issue Monitor agent: {e}")
+        run_stale_issue_monitor = None
+
+    @st.dialog("🔍 Stale Issue Monitor", width="large")
+    def show_stale_issue_dialog(owner: str, repo: str, execute: bool, test: bool):
+        try:
+            with st.spinner(
+                "Stale Issue Monitor running through permission pipeline → Token Vault → GitHub API..."
+            ):
+                result = run_async(
+                    run_stale_issue_monitor(
+                        owner=owner,
+                        repo=repo,
+                        execute_actions=execute,
+                        ciba_approved=False,
+                        stale_threshold_override=0 if test else None,
+                    )
+                )
+        except Exception as e:
+            st.error(f"Stale Issue Monitor failed: {e}")
+            return
+
+        if result["status"] == "blocked":
+            st.error(f"🚫 Blocked: {result['reason']}")
+        elif result["status"] == "error":
+            st.error(f"❌ Error: {result['reason']}")
+        elif result["status"] == "awaiting_ciba":
+            st.warning(f"🔐 {result['reason']}")
+            st.markdown(result.get("report", ""))
+            if st.button(
+                "✅ Approve & Execute",
+                key="sim_ciba_approve_dlg",
+                use_container_width=True,
+            ):
+                with st.spinner("Executing high-stakes actions with CIBA approval..."):
+                    approved_result = run_async(
+                        run_stale_issue_monitor(
+                            owner=owner,
+                            repo=repo,
+                            execute_actions=True,
+                            ciba_approved=True,
+                            stale_threshold_override=0 if test else None,
+                        )
+                    )
+                if approved_result["status"] == "success":
+                    st.success("✅ Actions executed successfully")
+                    if approved_result.get("actions_taken"):
+                        for action in approved_result["actions_taken"]:
+                            st.markdown(
+                                f"  ✅ Issue #{action['issue']} - {action['action']}"
+                            )
+        elif result["status"] == "success":
+            st.success("✅ Scan complete")
+            summary = result.get("summary", {})
+            sm1, sm2, sm3, sm4, sm5 = st.columns(5)
+            with sm1:
+                st.metric("Total Issues", summary.get("total_issues", 0))
+            with sm2:
+                st.metric("Active", summary.get("active", 0))
+            with sm3:
+                st.metric("1-2 Weeks", summary.get("one_to_two_weeks", 0))
+            with sm4:
+                st.metric("2 Weeks", summary.get("two_weeks", 0))
+            with sm5:
+                st.metric("2+ Weeks", summary.get("two_plus_weeks", 0))
+            st.divider()
+            categories = result.get("categories", {})
+            if categories.get("two_plus_weeks"):
+                st.markdown("**🔴 2+ Weeks Inactive**")
+                for issue in categories["two_plus_weeks"]:
+                    st.markdown(
+                        f"  • **#{issue['number']}** - {issue['title']} ({issue['days_inactive']} days)"
+                    )
+            if categories.get("two_weeks"):
+                st.markdown("**🟠 2 Weeks Inactive**")
+                for issue in categories["two_weeks"]:
+                    st.markdown(
+                        f"  • **#{issue['number']}** - {issue['title']} ({issue['days_inactive']} days)"
+                    )
+            if categories.get("one_to_two_weeks"):
+                st.markdown("**🟡 1-2 Weeks Inactive**")
+                for issue in categories["one_to_two_weeks"]:
+                    st.markdown(
+                        f"  • **#{issue['number']}** - {issue['title']} ({issue['days_inactive']} days)"
+                    )
+
+    if run_stale_issue_monitor is not None:
+        sim_col1, sim_col2, sim_col3 = st.columns([2, 2, 6])
+        with sim_col1:
+            sim_owner = st.text_input("Owner", value="GautamRonanki", key="sim_owner")
+        with sim_col2:
+            sim_repo = st.text_input("Repo", value="ctrlAI", key="sim_repo")
+
+        if "sim_test_mode" not in st.session_state:
+            st.session_state["sim_test_mode"] = False
+
+        sim_btn_col1, sim_btn_col2, sim_btn_col3, sim_btn_col4 = st.columns([2, 2, 2, 4])
+        with sim_btn_col1:
+            run_scan_clicked = st.button(
+                "▶️ Run Scan", key="run_stale_scan", use_container_width=True
+            )
+        with sim_btn_col2:
+            run_act_clicked = st.button(
+                "▶️ Run & Act", key="run_stale_act", use_container_width=True
+            )
+        with sim_btn_col3:
+            test_mode = st.checkbox(
+                "🧪 Test Mode",
+                key="sim_test_mode",
+                help="Sets threshold to 0 days so all issues appear stale",
+            )
+
+        if run_scan_clicked:
+            show_stale_issue_dialog(sim_owner, sim_repo, execute=False, test=test_mode)
+        if run_act_clicked:
+            show_stale_issue_dialog(sim_owner, sim_repo, execute=True, test=test_mode)
 
 
 # ============================================================
