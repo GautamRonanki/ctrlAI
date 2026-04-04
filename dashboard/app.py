@@ -1219,31 +1219,36 @@ elif page == "🔒 Security & Audit":
                 st.warning(
                     "⚠️ Critical issues detected - sending alert email via Gmail Agent..."
                 )
-                from core.token_service import get_google_token, get_stored_refresh_token
+                try:
+                    from core.token_service import get_google_token, get_stored_refresh_token
 
-                refresh_token = get_stored_refresh_token()
-                if refresh_token:
-                    gmail_token = run_async(get_google_token(refresh_token))
-                    if gmail_token:
-                        email_result = run_async(
-                            send_alert_email(report_result["report"], gmail_token)
-                        )
-                        if email_result.get("status") == "blocked":
-                            st.error(
-                                f"🚫 Inter-agent request blocked: {email_result['reason']}"
+                    refresh_token = get_stored_refresh_token()
+                    if refresh_token:
+                        gmail_token = run_async(get_google_token(refresh_token))
+                        if gmail_token:
+                            email_result = run_async(
+                                send_alert_email(report_result["report"], gmail_token)
                             )
-                        elif "error" in email_result:
-                            st.error(
-                                f"❌ Failed to send alert: {email_result.get('error', 'Unknown error')}"
-                            )
+                            if email_result.get("status") == "blocked":
+                                st.error(
+                                    f"🚫 Inter-agent request blocked: {email_result['reason']}"
+                                )
+                            elif "error" in email_result:
+                                st.error(
+                                    f"❌ Failed to send alert: {email_result.get('error', 'Unknown error')}"
+                                )
+                            else:
+                                st.success(
+                                    "✅ Alert email sent to admin via Gmail Agent (inter-agent communication)"
+                                )
                         else:
-                            st.success(
-                                "✅ Alert email sent to admin via Gmail Agent (inter-agent communication)"
-                            )
+                            st.error("❌ Could not retrieve Gmail token from Token Vault")
                     else:
-                        st.error("❌ Could not retrieve Gmail token from Token Vault")
-                else:
-                    st.error("❌ No refresh token available.")
+                        st.error("❌ No refresh token available.")
+                except Exception:
+                    st.warning(
+                        "Alert email requires an active OAuth session. Use the Slack bot for live agent actions."
+                    )
             elif send_alert_flag and not report_result.get("has_critical"):
                 st.info("✅ No critical issues found - no alert email needed.")
         else:
