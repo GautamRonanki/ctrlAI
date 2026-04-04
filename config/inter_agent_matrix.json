@@ -25,6 +25,11 @@
     ],
     "security_report_agent": [
       "generate_reports"
+    ],
+    "gmail_agent": [
+      "read_email_context",
+      "send_email",
+      "send_alert_email"
     ]
   },
   "github_agent": {
