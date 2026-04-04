@@ -13,6 +13,7 @@ Workflow: "Prepare me for my next meeting"
 
 import os
 import json
+import re
 from loguru import logger
 
 from core.permissions import (
@@ -358,7 +359,9 @@ def format_workflow_result(result: dict) -> str:
     parts = []
     parts.append("📋 *Meeting Preparation Briefing*")
     parts.append("─" * 30)
-    parts.append(result["briefing"])
+    # Convert markdown **bold** to Slack *bold*
+    briefing = re.sub(r'\*\*(.+?)\*\*', r'*\1*', result["briefing"])
+    parts.append(briefing)
 
     # Add inter-agent transparency
     ia_results = result.get("inter_agent_results", [])
