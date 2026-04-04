@@ -42,14 +42,14 @@ async def home(request: Request):
         <p>Logged in as <b>{user.get("email", user.get("sub"))}</b></p>
         <p>User ID: {user.get("sub")}</p>
         <p>Has refresh token: <b>{bool(request.session.get("refresh_token"))}</b></p>
-        <p>Google Connected Account: <b>{"YES" if connected else "NO"}</b></p>
-        <p>GitHub Connected Account: <b>{"YES" if request.session.get("github_connected") else "NO"}</b></p>
+        <p>Google Connected Account: <b>{"YES" if connected else "NO"}</b>{' (<a href="/disconnect/google">Disconnect</a>)' if connected else ''}</p>
+        <p>GitHub Connected Account: <b>{"YES" if request.session.get("github_connected") else "NO"}</b>{' (<a href="/disconnect/github">Disconnect</a>)' if request.session.get("github_connected") else ''}</p>
         <hr>
         <h3>Steps:</h3>
         <ol>
             <li>{"&#9989;" if user else "&#10060;"} <a href="/login">Login</a> (done!)</li>
-            <li>{"&#9989;" if connected else "&#10145;"} <a href="/connect/google">Connect Google Account to Token Vault</a></li>
-            <li>{"&#9989;" if request.session.get("github_connected") else "&#10145;"} <a href="/connect/github">Connect GitHub Account to Token Vault</a></li>
+            <li>{"&#9989;" if connected else "&#10145;"} <a href="/connect/google">Connect Google Account to Token Vault</a>{' · <a href="/disconnect/google">Disconnect</a>' if connected else ''}</li>
+            <li>{"&#9989;" if request.session.get("github_connected") else "&#10145;"} <a href="/connect/github">Connect GitHub Account to Token Vault</a>{' · <a href="/disconnect/github">Disconnect</a>' if request.session.get("github_connected") else ''}</li>
             <li><a href="/test/gmail">Test Gmail via Token Vault</a></li>
             <li><a href="/api/agents/github/repos">Test GitHub via Token Vault</a></li>
         </ol>
@@ -450,6 +450,151 @@ async def connect_github_complete(request: Request, connect_code: str):
     logger.error(f"GitHub connection failed: {response.text}")
     return JSONResponse(
         {"error": "GitHub connection failed", "details": response.json()},
+        status_code=400,
+    )
+
+
+# ============================================================
+# Disconnect Connected Accounts
+# ============================================================
+@app.get("/disconnect/google")
+async def disconnect_google(request: Request):
+    user = request.session.get("user")
+    if not user:
+        raise HTTPException(status_code=401, detail="Not logged in.")
+
+    refresh_token = request.session.get("refresh_token")
+    if not refresh_token:
+        raise HTTPException(
+            status_code=401, detail="No refresh token. Login again with consent."
+        )
+
+    # Get My Account API token
+    async with httpx.AsyncClient() as client:
+        token_resp = await client.post(
+            f"https://{AUTH0_DOMAIN}/oauth/token",
+            json={
+                "grant_type": "refresh_token",
+                "client_id": AUTH0_CLIENT_ID,
+                "client_secret": AUTH0_CLIENT_SECRET,
+                "refresh_token": refresh_token,
+                "audience": f"https://{AUTH0_DOMAIN}/me/",
+                "scope": "openid profile offline_access delete:me:connected_accounts",
+            },
+        )
+
+    if token_resp.status_code != 200:
+        logger.error(
+            f"MRRT exchange failed for disconnect: {token_resp.status_code} {token_resp.text}"
+        )
+        return JSONResponse(
+            {
+                "error": "Failed to get My Account API token",
+                "details": token_resp.json(),
+            },
+            status_code=400,
+        )
+
+    me_token = token_resp.json().get("access_token")
+
+    async with httpx.AsyncClient() as client:
+        response = await client.delete(
+            f"https://{AUTH0_DOMAIN}/me/v1/connected-accounts/google-oauth2",
+            headers={"Authorization": f"Bearer {me_token}"},
+        )
+
+    if response.status_code in (200, 204):
+        request.session["google_connected"] = False
+        from core.logger import log_audit
+
+        log_audit(
+            "admin_action",
+            "user",
+            "disconnect_google",
+            "success",
+            {"user_email": user.get("email", "")},
+        )
+        logger.info(f"Google account disconnected for {user.get('email')}")
+        return RedirectResponse("/")
+
+    logger.error(f"Google disconnect failed: {response.status_code} {response.text}")
+    return JSONResponse(
+        {
+            "error": "Failed to disconnect Google account",
+            "status": response.status_code,
+            "details": response.json() if response.text else {},
+        },
+        status_code=400,
+    )
+
+
+@app.get("/disconnect/github")
+async def disconnect_github(request: Request):
+    user = request.session.get("user")
+    if not user:
+        raise HTTPException(status_code=401, detail="Not logged in.")
+
+    refresh_token = request.session.get("refresh_token")
+    if not refresh_token:
+        raise HTTPException(
+            status_code=401, detail="No refresh token. Login again with consent."
+        )
+
+    # Get My Account API token
+    async with httpx.AsyncClient() as client:
+        token_resp = await client.post(
+            f"https://{AUTH0_DOMAIN}/oauth/token",
+            json={
+                "grant_type": "refresh_token",
+                "client_id": AUTH0_CLIENT_ID,
+                "client_secret": AUTH0_CLIENT_SECRET,
+                "refresh_token": refresh_token,
+                "audience": f"https://{AUTH0_DOMAIN}/me/",
+                "scope": "openid profile offline_access delete:me:connected_accounts",
+            },
+        )
+
+    if token_resp.status_code != 200:
+        logger.error(
+            f"MRRT exchange failed for disconnect: {token_resp.status_code} {token_resp.text}"
+        )
+        return JSONResponse(
+            {
+                "error": "Failed to get My Account API token",
+                "details": token_resp.json(),
+            },
+            status_code=400,
+        )
+
+    me_token = token_resp.json().get("access_token")
+
+    async with httpx.AsyncClient() as client:
+        response = await client.delete(
+            f"https://{AUTH0_DOMAIN}/me/v1/connected-accounts/github",
+            headers={"Authorization": f"Bearer {me_token}"},
+        )
+
+    if response.status_code in (200, 204):
+        request.session["github_connected"] = False
+        from core.logger import log_audit
+
+        log_audit(
+            "admin_action",
+            "user",
+            "disconnect_github",
+            "success",
+            {"user_email": user.get("email", "")},
+        )
+        logger.info(f"GitHub account disconnected for {user.get('email')}")
+        return RedirectResponse("/")
+
+    logger.error(f"GitHub disconnect failed: {response.status_code} {response.text}")
+    return JSONResponse(
+        {
+            "error": "Failed to disconnect GitHub account",
+            "status": response.status_code,
+            "details": response.json() if response.text else {},
+        },
         status_code=400,
     )
 

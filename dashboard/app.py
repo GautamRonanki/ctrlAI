@@ -6,6 +6,7 @@ Multi-page layout with sidebar navigation.
 
 import json
 import asyncio
+import os
 import streamlit as st
 import streamlit.components.v1 as components
 import pandas as pd
@@ -23,6 +24,32 @@ st.set_page_config(
     layout="wide",
     initial_sidebar_state="expanded",
 )
+
+# ── Password Gate ──
+_dashboard_password = os.environ.get("DASHBOARD_PASSWORD")
+if _dashboard_password and not st.session_state.get("dashboard_authenticated"):
+    st.markdown(
+        """
+        <div style="display:flex; justify-content:center; align-items:center; min-height:60vh;">
+        <div style="width:360px; text-align:center;">
+            <div style="font-size:2em; margin-bottom:8px;">🛡️</div>
+            <div style="font-size:1.4em; font-weight:700; margin-bottom:4px;">ctrlAI Admin</div>
+            <div style="font-size:0.9em; color:#888; margin-bottom:24px;">Enter the dashboard password to continue.</div>
+        </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+    col_l, col_m, col_r = st.columns([1, 1, 1])
+    with col_m:
+        pwd = st.text_input("Password", type="password", label_visibility="collapsed", placeholder="Password")
+        if st.button("Login", use_container_width=True):
+            if pwd == _dashboard_password:
+                st.session_state["dashboard_authenticated"] = True
+                st.rerun()
+            else:
+                st.error("Incorrect password.")
+    st.stop()
 
 # ── Imports from core ──
 from core.permissions import (
