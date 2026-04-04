@@ -645,7 +645,9 @@ async def logout(request: Request):
 
 
 @app.get("/agents")
-async def list_agents():
+async def list_agents(request: Request):
+    if not request.session.get("user"):
+        raise HTTPException(status_code=401, detail="Authentication required")
     from core.permissions import get_all_agents
 
     agents = get_all_agents()
@@ -662,7 +664,9 @@ async def list_agents():
 
 
 @app.get("/audit")
-async def get_audit_log():
+async def get_audit_log(request: Request):
+    if not request.session.get("user"):
+        raise HTTPException(status_code=401, detail="Authentication required")
     import json
     from core.logger import AUDIT_LOG_PATH
 

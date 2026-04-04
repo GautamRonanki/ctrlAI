@@ -406,6 +406,215 @@ def run_inter_agent_tests() -> list[dict]:
     return results
 
 
+def run_enforcement_tests() -> list[dict]:
+    """Test REAL enforcement by temporarily modifying state and verifying the system responds."""
+    from core.permissions import (
+        get_all_agents,
+        AgentStatus,
+        check_scope_permission,
+        remove_scope,
+        add_scope,
+        update_scopes,
+        suspend_agent,
+        activate_agent,
+        get_permission_matrix,
+        update_inter_agent_permission,
+        check_inter_agent_permission,
+        is_high_stakes,
+        update_high_stakes,
+    )
+
+    results = []
+    agents = get_all_agents()
+
+    # --- 1. SCOPE REVOCATION TEST ---
+    scope_agent = None
+    scope_to_test = None
+    original_scopes = None
+    for name, agent in agents.items():
+        if agent.status == AgentStatus.ACTIVE and agent.permitted_scopes:
+            scope_agent = name
+            scope_to_test = agent.permitted_scopes[0]
+            original_scopes = list(agent.permitted_scopes)
+            break
+
+    if scope_agent:
+        try:
+            remove_scope(scope_agent, scope_to_test)
+            denied = not check_scope_permission(
+                scope_agent, scope_to_test, _system_bypass_rate_limit=True
+            )
+            add_scope(scope_agent, scope_to_test)
+            restored = check_scope_permission(
+                scope_agent, scope_to_test, _system_bypass_rate_limit=True
+            )
+            results.append(
+                {
+                    "id": "enforce_scope_revocation",
+                    "category": "enforcement",
+                    "description": f"Scope revocation: remove '{scope_to_test}' from {scope_agent}, verify denied, restore, verify allowed",
+                    "agent": scope_agent,
+                    "scope": scope_to_test,
+                    "denied_after_remove": denied,
+                    "allowed_after_restore": restored,
+                    "passed": denied and restored,
+                }
+            )
+        except Exception as e:
+            results.append(
+                {
+                    "id": "enforce_scope_revocation",
+                    "category": "enforcement",
+                    "description": f"Scope revocation test for {scope_agent}",
+                    "passed": False,
+                    "error": str(e),
+                }
+            )
+        finally:
+            update_scopes(scope_agent, original_scopes)
+
+    # --- 2. AGENT SUSPENSION TEST ---
+    suspend_agent_name = None
+    suspend_scope = None
+    for name, agent in agents.items():
+        if agent.status == AgentStatus.ACTIVE and agent.permitted_scopes:
+            suspend_agent_name = name
+            suspend_scope = agent.permitted_scopes[0]
+            break
+
+    if suspend_agent_name:
+        try:
+            suspend_agent(suspend_agent_name)
+            denied = not check_scope_permission(
+                suspend_agent_name, suspend_scope, _system_bypass_rate_limit=True
+            )
+            activate_agent(suspend_agent_name)
+            restored = check_scope_permission(
+                suspend_agent_name, suspend_scope, _system_bypass_rate_limit=True
+            )
+            results.append(
+                {
+                    "id": "enforce_agent_suspension",
+                    "category": "enforcement",
+                    "description": f"Agent suspension: suspend {suspend_agent_name}, verify denied, reactivate, verify allowed",
+                    "agent": suspend_agent_name,
+                    "scope": suspend_scope,
+                    "denied_when_suspended": denied,
+                    "allowed_when_reactivated": restored,
+                    "passed": denied and restored,
+                }
+            )
+        except Exception as e:
+            results.append(
+                {
+                    "id": "enforce_agent_suspension",
+                    "category": "enforcement",
+                    "description": f"Agent suspension test for {suspend_agent_name}",
+                    "passed": False,
+                    "error": str(e),
+                }
+            )
+        finally:
+            activate_agent(suspend_agent_name)
+
+    # --- 3. INTER-AGENT REVOCATION TEST ---
+    matrix = get_permission_matrix()
+    ia_requester = None
+    ia_target = None
+    ia_original_actions = None
+    for requester, targets in matrix.items():
+        for target, actions in targets.items():
+            if actions:
+                ia_requester = requester
+                ia_target = target
+                ia_original_actions = list(actions)
+                break
+        if ia_requester:
+            break
+
+    if ia_requester and ia_target:
+        ia_test_action = ia_original_actions[0]
+        try:
+            update_inter_agent_permission(ia_requester, ia_target, [])
+            denied = not check_inter_agent_permission(
+                ia_requester, ia_target, ia_test_action
+            )
+            update_inter_agent_permission(ia_requester, ia_target, ia_original_actions)
+            restored = check_inter_agent_permission(
+                ia_requester, ia_target, ia_test_action
+            )
+            results.append(
+                {
+                    "id": "enforce_inter_agent_revocation",
+                    "category": "enforcement",
+                    "description": f"Inter-agent revocation: remove {ia_requester} → {ia_target} access, verify denied, restore, verify allowed",
+                    "requesting": ia_requester,
+                    "target": ia_target,
+                    "action": ia_test_action,
+                    "denied_after_revoke": denied,
+                    "allowed_after_restore": restored,
+                    "passed": denied and restored,
+                }
+            )
+        except Exception as e:
+            results.append(
+                {
+                    "id": "enforce_inter_agent_revocation",
+                    "category": "enforcement",
+                    "description": f"Inter-agent revocation test for {ia_requester} → {ia_target}",
+                    "passed": False,
+                    "error": str(e),
+                }
+            )
+        finally:
+            update_inter_agent_permission(ia_requester, ia_target, ia_original_actions)
+
+    # --- 4. HIGH-STAKES MODIFICATION TEST ---
+    hs_agent = None
+    hs_action = None
+    hs_original = None
+    for name, agent in agents.items():
+        if agent.status == AgentStatus.ACTIVE and agent.high_stakes_actions:
+            hs_agent = name
+            hs_action = agent.high_stakes_actions[0]
+            hs_original = list(agent.high_stakes_actions)
+            break
+
+    if hs_agent:
+        try:
+            new_hs = [a for a in hs_original if a != hs_action]
+            update_high_stakes(hs_agent, new_hs)
+            not_flagged = not is_high_stakes(hs_agent, hs_action)
+            update_high_stakes(hs_agent, hs_original)
+            flagged_again = is_high_stakes(hs_agent, hs_action)
+            results.append(
+                {
+                    "id": "enforce_high_stakes_modification",
+                    "category": "enforcement",
+                    "description": f"High-stakes modification: remove '{hs_action}' from {hs_agent} high-stakes, verify not flagged, restore, verify flagged",
+                    "agent": hs_agent,
+                    "action": hs_action,
+                    "not_flagged_after_remove": not_flagged,
+                    "flagged_after_restore": flagged_again,
+                    "passed": not_flagged and flagged_again,
+                }
+            )
+        except Exception as e:
+            results.append(
+                {
+                    "id": "enforce_high_stakes_modification",
+                    "category": "enforcement",
+                    "description": f"High-stakes modification test for {hs_agent}",
+                    "passed": False,
+                    "error": str(e),
+                }
+            )
+        finally:
+            update_high_stakes(hs_agent, hs_original)
+
+    return results
+
+
 # ============================================================
 # Main Eval Runner
 # ============================================================
@@ -444,6 +653,15 @@ async def run_all_evals(include_routing: bool = True) -> dict:
         "total": len(ia_results),
         "passed": sum(1 for r in ia_results if r["passed"]),
         "failed": sum(1 for r in ia_results if not r["passed"]),
+    }
+
+    # Enforcement tests (modifies real state with guaranteed cleanup)
+    enforce_results = run_enforcement_tests()
+    report["categories"]["enforcement"] = {
+        "tests": enforce_results,
+        "total": len(enforce_results),
+        "passed": sum(1 for r in enforce_results if r["passed"]),
+        "failed": sum(1 for r in enforce_results if not r["passed"]),
     }
 
     # Routing tests (requires LLM calls, slower)

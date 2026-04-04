@@ -1,5 +1,5 @@
 {
-  "timestamp": "2026-04-03T21:33:06.422184+00:00",
+  "timestamp": "2026-04-04T04:17:18.455668+00:00",
   "categories": {
     "permission": {
       "tests": [
@@ -363,41 +363,41 @@
         {
           "id": "ciba_drive_agent_list_files",
           "category": "ciba",
-          "description": "List Files does NOT require CIBA approval for Drive Agent",
+          "description": "List Files requires CIBA approval for Drive Agent",
           "agent": "drive_agent",
           "action": "list_files",
-          "expected_high_stakes": false,
-          "actual_high_stakes": false,
+          "expected_high_stakes": true,
+          "actual_high_stakes": true,
           "passed": true
         },
         {
           "id": "ciba_drive_agent_search_files",
           "category": "ciba",
-          "description": "Search Files does NOT require CIBA approval for Drive Agent",
+          "description": "Search Files requires CIBA approval for Drive Agent",
           "agent": "drive_agent",
           "action": "search_files",
-          "expected_high_stakes": false,
-          "actual_high_stakes": false,
+          "expected_high_stakes": true,
+          "actual_high_stakes": true,
           "passed": true
         },
         {
           "id": "ciba_drive_agent_read_files",
           "category": "ciba",
-          "description": "Read Files does NOT require CIBA approval for Drive Agent",
+          "description": "Read Files requires CIBA approval for Drive Agent",
           "agent": "drive_agent",
           "action": "read_files",
-          "expected_high_stakes": false,
-          "actual_high_stakes": false,
+          "expected_high_stakes": true,
+          "actual_high_stakes": true,
           "passed": true
         },
         {
           "id": "ciba_drive_agent_create_files",
           "category": "ciba",
-          "description": "Create Files does NOT require CIBA approval for Drive Agent",
+          "description": "Create Files requires CIBA approval for Drive Agent",
           "agent": "drive_agent",
           "action": "create_files",
-          "expected_high_stakes": false,
-          "actual_high_stakes": false,
+          "expected_high_stakes": true,
+          "actual_high_stakes": true,
           "passed": true
         },
         {
@@ -413,31 +413,31 @@
         {
           "id": "ciba_calendar_agent_modify_events",
           "category": "ciba",
-          "description": "Modify Events does NOT require CIBA approval for Calendar Agent",
+          "description": "Modify Events requires CIBA approval for Calendar Agent",
           "agent": "calendar_agent",
           "action": "modify_events",
-          "expected_high_stakes": false,
-          "actual_high_stakes": false,
+          "expected_high_stakes": true,
+          "actual_high_stakes": true,
           "passed": true
         },
         {
           "id": "ciba_calendar_agent_list_events",
           "category": "ciba",
-          "description": "List Events does NOT require CIBA approval for Calendar Agent",
+          "description": "List Events requires CIBA approval for Calendar Agent",
           "agent": "calendar_agent",
           "action": "list_events",
-          "expected_high_stakes": false,
-          "actual_high_stakes": false,
+          "expected_high_stakes": true,
+          "actual_high_stakes": true,
           "passed": true
         },
         {
           "id": "ciba_calendar_agent_read_events",
           "category": "ciba",
-          "description": "Read Events does NOT require CIBA approval for Calendar Agent",
+          "description": "Read Events requires CIBA approval for Calendar Agent",
           "agent": "calendar_agent",
           "action": "read_events",
-          "expected_high_stakes": false,
-          "actual_high_stakes": false,
+          "expected_high_stakes": true,
+          "actual_high_stakes": true,
           "passed": true
         },
         {
@@ -453,61 +453,61 @@
         {
           "id": "ciba_github_agent_list_repos",
           "category": "ciba",
-          "description": "List Repos does NOT require CIBA approval for Github Agent",
+          "description": "List Repos requires CIBA approval for Github Agent",
           "agent": "github_agent",
           "action": "list_repos",
-          "expected_high_stakes": false,
-          "actual_high_stakes": false,
+          "expected_high_stakes": true,
+          "actual_high_stakes": true,
           "passed": true
         },
         {
           "id": "ciba_github_agent_list_issues",
           "category": "ciba",
-          "description": "List Issues does NOT require CIBA approval for Github Agent",
+          "description": "List Issues requires CIBA approval for Github Agent",
           "agent": "github_agent",
           "action": "list_issues",
-          "expected_high_stakes": false,
-          "actual_high_stakes": false,
+          "expected_high_stakes": true,
+          "actual_high_stakes": true,
           "passed": true
         },
         {
           "id": "ciba_github_agent_read_repos",
           "category": "ciba",
-          "description": "Read Repos does NOT require CIBA approval for Github Agent",
+          "description": "Read Repos requires CIBA approval for Github Agent",
           "agent": "github_agent",
           "action": "read_repos",
-          "expected_high_stakes": false,
-          "actual_high_stakes": false,
+          "expected_high_stakes": true,
+          "actual_high_stakes": true,
           "passed": true
         },
         {
           "id": "ciba_github_agent_read_issues",
           "category": "ciba",
-          "description": "Read Issues does NOT require CIBA approval for Github Agent",
+          "description": "Read Issues requires CIBA approval for Github Agent",
           "agent": "github_agent",
           "action": "read_issues",
-          "expected_high_stakes": false,
-          "actual_high_stakes": false,
+          "expected_high_stakes": true,
+          "actual_high_stakes": true,
           "passed": true
         },
         {
           "id": "ciba_security_report_agent_send_alert_emails",
           "category": "ciba",
-          "description": "Send Alert Emails does NOT require CIBA approval for Security Report Agent",
+          "description": "Send Alert Emails requires CIBA approval for Security Report Agent",
           "agent": "security_report_agent",
           "action": "send_alert_emails",
-          "expected_high_stakes": false,
-          "actual_high_stakes": false,
+          "expected_high_stakes": true,
+          "actual_high_stakes": true,
           "passed": true
         },
         {
           "id": "ciba_security_report_agent_generate_reports",
           "category": "ciba",
-          "description": "Generate Reports does NOT require CIBA approval for Security Report Agent",
+          "description": "Generate Reports requires CIBA approval for Security Report Agent",
           "agent": "security_report_agent",
           "action": "generate_reports",
-          "expected_high_stakes": false,
-          "actual_high_stakes": false,
+          "expected_high_stakes": true,
+          "actual_high_stakes": true,
           "passed": true
         },
         {
@@ -978,6 +978,17 @@
           "passed": true
         },
         {
+          "id": "ia_security_report_agent_gmail_agent_send_email_allow",
+          "category": "inter_agent",
+          "description": "Security Report Agent \u2192 Gmail Agent: send email should be allowed",
+          "requesting": "security_report_agent",
+          "target": "gmail_agent",
+          "action": "send_email",
+          "expected": true,
+          "actual": true,
+          "passed": true
+        },
+        {
           "id": "ia_security_report_agent_gmail_agent_send_alert_email_allow",
           "category": "inter_agent",
           "description": "Security Report Agent \u2192 Gmail Agent: send alert email should be allowed",
@@ -1022,9 +1033,20 @@
           "passed": true
         },
         {
-          "id": "ia_security_report_agent_calendar_agent_blocked",
+          "id": "ia_security_report_agent_calendar_agent_check_availability_allow",
           "category": "inter_agent",
-          "description": "Security Report Agent \u2192 Calendar Agent: should be fully blocked",
+          "description": "Security Report Agent \u2192 Calendar Agent: check availability should be allowed",
+          "requesting": "security_report_agent",
+          "target": "calendar_agent",
+          "action": "check_availability",
+          "expected": true,
+          "actual": true,
+          "passed": true
+        },
+        {
+          "id": "ia_security_report_agent_calendar_agent_store_attachment_deny",
+          "category": "inter_agent",
+          "description": "Security Report Agent \u2192 Calendar Agent: store attachment should be denied",
           "requesting": "security_report_agent",
           "target": "calendar_agent",
           "action": "store_attachment",
@@ -1198,8 +1220,56 @@
           "passed": true
         }
       ],
-      "total": 60,
-      "passed": 60,
+      "total": 62,
+      "passed": 62,
+      "failed": 0
+    },
+    "enforcement": {
+      "tests": [
+        {
+          "id": "enforce_scope_revocation",
+          "category": "enforcement",
+          "description": "Scope revocation: remove 'read_emails' from gmail_agent, verify denied, restore, verify allowed",
+          "agent": "gmail_agent",
+          "scope": "read_emails",
+          "denied_after_remove": true,
+          "allowed_after_restore": true,
+          "passed": true
+        },
+        {
+          "id": "enforce_agent_suspension",
+          "category": "enforcement",
+          "description": "Agent suspension: suspend gmail_agent, verify denied, reactivate, verify allowed",
+          "agent": "gmail_agent",
+          "scope": "read_emails",
+          "denied_when_suspended": true,
+          "allowed_when_reactivated": true,
+          "passed": true
+        },
+        {
+          "id": "enforce_inter_agent_revocation",
+          "category": "enforcement",
+          "description": "Inter-agent revocation: remove gmail_agent \u2192 drive_agent access, verify denied, restore, verify allowed",
+          "requesting": "gmail_agent",
+          "target": "drive_agent",
+          "action": "store_attachment",
+          "denied_after_revoke": true,
+          "allowed_after_restore": true,
+          "passed": true
+        },
+        {
+          "id": "enforce_high_stakes_modification",
+          "category": "enforcement",
+          "description": "High-stakes modification: remove 'send_emails' from gmail_agent high-stakes, verify not flagged, restore, verify flagged",
+          "agent": "gmail_agent",
+          "action": "send_emails",
+          "not_flagged_after_remove": true,
+          "flagged_after_restore": true,
+          "passed": true
+        }
+      ],
+      "total": 4,
+      "passed": 4,
       "failed": 0
     },
     "routing": {
@@ -1215,7 +1285,7 @@
           "agent_correct": true,
           "action_correct": true,
           "passed": true,
-          "latency_ms": 983.5
+          "latency_ms": 1663.2
         },
         {
           "id": "route_gmail_search",
@@ -1228,7 +1298,7 @@
           "agent_correct": true,
           "action_correct": true,
           "passed": true,
-          "latency_ms": 1043.8
+          "latency_ms": 1590.2
         },
         {
           "id": "route_gmail_send",
@@ -1241,7 +1311,7 @@
           "agent_correct": true,
           "action_correct": true,
           "passed": true,
-          "latency_ms": 920.5
+          "latency_ms": 1854.7
         },
         {
           "id": "route_calendar_list",
@@ -1254,7 +1324,7 @@
           "agent_correct": true,
           "action_correct": true,
           "passed": true,
-          "latency_ms": 1011.1
+          "latency_ms": 1398.6
         },
         {
           "id": "route_drive_list",
@@ -1267,7 +1337,7 @@
           "agent_correct": true,
           "action_correct": true,
           "passed": true,
-          "latency_ms": 831.5
+          "latency_ms": 1984.0
         },
         {
           "id": "route_drive_search",
@@ -1280,7 +1350,7 @@
           "agent_correct": true,
           "action_correct": true,
           "passed": true,
-          "latency_ms": 908.4
+          "latency_ms": 836.1
         },
         {
           "id": "route_github_repos",
@@ -1293,7 +1363,7 @@
           "agent_correct": true,
           "action_correct": true,
           "passed": true,
-          "latency_ms": 931.8
+          "latency_ms": 1298.7
         },
         {
           "id": "route_github_issues",
@@ -1306,7 +1376,7 @@
           "agent_correct": true,
           "action_correct": true,
           "passed": true,
-          "latency_ms": 1264.8
+          "latency_ms": 1638.1
         },
         {
           "id": "route_none",
@@ -1319,7 +1389,7 @@
           "agent_correct": true,
           "action_correct": true,
           "passed": true,
-          "latency_ms": 678.4
+          "latency_ms": 1639.4
         },
         {
           "id": "route_calendar_create",
@@ -1332,7 +1402,7 @@
           "agent_correct": true,
           "action_correct": true,
           "passed": true,
-          "latency_ms": 1117.6
+          "latency_ms": 1186.8
         }
       ],
       "total": 10,
@@ -1341,8 +1411,8 @@
     }
   },
   "summary": {
-    "total_tests": 122,
-    "total_passed": 122,
+    "total_tests": 128,
+    "total_passed": 128,
     "total_failed": 0,
     "pass_rate": 100.0
   }

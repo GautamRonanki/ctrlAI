@@ -108,7 +108,7 @@ Revoke an agent's scope on the admin dashboard and it takes effect immediately o
 |-------|-----------|
 | Language | Python 3.12 |
 | Agent Framework | LangGraph |
-| LLM | Claude 3.5 Sonnet |
+| LLM | GPT-4o-mini (via OpenAI) |
 | Backend | FastAPI |
 | Admin Dashboard | Streamlit |
 | User Interface | Slack (Socket Mode) |
@@ -150,7 +150,7 @@ See `.env.example` for all required variables:
 - `AUTH0_DOMAIN` - Your Auth0 tenant domain
 - `AUTH0_CLIENT_ID` / `AUTH0_CLIENT_SECRET` - Auth0 application credentials
 - `SLACK_BOT_TOKEN` / `SLACK_APP_TOKEN` - Slack bot credentials
-- `ANTHROPIC_API_KEY` - For Claude LLM calls
+- `OPENAI_API_KEY` - For GPT-4o-mini LLM calls
 - `ADMIN_ALERT_EMAIL` - Email for security alerts
 
 ---
@@ -178,6 +178,17 @@ ctrlAI/
 ├── app.py               # FastAPI backend
 └── requirements.txt
 ```
+
+---
+
+## Demo Scope
+
+This is a hackathon demonstration of the ctrlAI architecture. The following simplifications are made for the demo environment:
+
+- Single user with one Auth0 refresh token shared across agents (production would use per-agent credential isolation with Token Vault's multi-user support)
+- OAuth login flow uses basic session cookies without CSRF state parameter (production would add state verification)
+- Evaluation suite validates that enforcement matches configuration in real time. It is not a substitute for integration testing in a production deployment.
+- The FastAPI web interface is a developer tool for OAuth setup, not the end-user product. The Slack bot and Streamlit dashboard are the user-facing interfaces.
 
 ---
 
