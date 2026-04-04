@@ -64,6 +64,9 @@ from core.permissions import (
     get_permission_matrix,
     update_inter_agent_permission,
     get_all_inter_agent_actions,
+    check_scope_permission,
+    check_inter_agent_permission,
+    AVAILABLE_SCOPES,
 )
 
 # ── Paths ──
@@ -477,6 +480,91 @@ if page == "📊 Dashboard":
     else:
         st.info("No activity yet.")
 
+    # ── Security Enforcement Demo ──
+    st.divider()
+    st.subheader("🛡️ Security Enforcement Demo")
+    st.caption("Click any scenario to see how ctrlAI handles permission violations in real time.")
+
+    demo_col1, demo_col2, demo_col3 = st.columns(3)
+
+    with demo_col1:
+        if st.button("🚫 Scope Violation", use_container_width=True):
+            # Find an active agent and a scope it does NOT have
+            demo_agent = None
+            demo_scope = None
+            for name, agent in agents.items():
+                if agent.status == AgentStatus.ACTIVE:
+                    available = AVAILABLE_SCOPES.get(name, [])
+                    denied_scopes = [s for s in available if s not in agent.permitted_scopes]
+                    if denied_scopes:
+                        demo_agent = name
+                        demo_scope = denied_scopes[0]
+                        break
+            if demo_agent:
+                result = check_scope_permission(demo_agent, demo_scope, _system_bypass_rate_limit=True)
+                if not result:
+                    st.error(f"**{humanize(demo_agent)}** attempted `{humanize_lower(demo_scope)}` — **DENIED** by permission gate")
+                    st.caption("Audit log entry created.")
+                else:
+                    st.warning("Scope was unexpectedly allowed.")
+            else:
+                st.info("No active agent with a revoked scope found. Revoke a scope first.")
+
+    with demo_col2:
+        if st.button("🔗 Inter-Agent Violation", use_container_width=True):
+            # Find a pair of active agents with no inter-agent access
+            matrix = get_permission_matrix()
+            active_names = [n for n, a in agents.items() if a.status == AgentStatus.ACTIVE]
+            demo_req = None
+            demo_tgt = None
+            demo_action = None
+            for req in active_names:
+                for tgt in active_names:
+                    if req == tgt:
+                        continue
+                    allowed = matrix.get(req, {}).get(tgt, [])
+                    if not allowed:
+                        demo_req = req
+                        demo_tgt = tgt
+                        demo_action = "send_email"
+                        break
+                if demo_req:
+                    break
+            if demo_req:
+                result = check_inter_agent_permission(demo_req, demo_tgt, demo_action)
+                if not result:
+                    action_label = IA_ACTION_LABELS.get(demo_action, demo_action)
+                    st.error(f"**{humanize(demo_req)}** attempted to request `{action_label}` from **{humanize(demo_tgt)}** — **BLOCKED** by inter-agent policy")
+                    st.caption("Audit log entry created.")
+                else:
+                    st.warning("Request was unexpectedly allowed.")
+            else:
+                st.info("No blocked agent pair found in current configuration.")
+
+    with demo_col3:
+        if st.button("⏸️ Suspended Agent", use_container_width=True):
+            # Pick an active agent, suspend, test, reactivate
+            demo_agent = None
+            demo_scope = None
+            for name, agent in agents.items():
+                if agent.status == AgentStatus.ACTIVE and agent.permitted_scopes:
+                    demo_agent = name
+                    demo_scope = agent.permitted_scopes[0]
+                    break
+            if demo_agent:
+                try:
+                    suspend_agent(demo_agent)
+                    result = check_scope_permission(demo_agent, demo_scope, _system_bypass_rate_limit=True)
+                    if not result:
+                        st.warning(f"**{humanize(demo_agent)}** was suspended — all access denied")
+                    else:
+                        st.error("Suspended agent was unexpectedly allowed access.")
+                finally:
+                    activate_agent(demo_agent)
+                st.success(f"**{humanize(demo_agent)}** reactivated — access restored")
+            else:
+                st.info("No active agent with scopes found.")
+
 
 # ============================================================
 # PAGE: Agent Registry
@@ -574,6 +662,45 @@ elif page == "🤖 Agent Registry":
 
         st.subheader(f"{status_emoji} {humanize(agent_name)}")
         st.caption(agent.description)
+
+        # ── Effective Access Summary ──
+        provider_label = PROVIDER_LABELS.get(agent.oauth_provider, agent.oauth_provider)
+        status_label = "Active" if is_active else "Suspended"
+        num_scopes = len(agent.permitted_scopes)
+        num_hs = len(agent.high_stakes_actions)
+        st.caption("**Effective Access Summary**")
+        st.markdown(
+            f"`{provider_label}` · `{status_label}` · **{num_scopes}** permitted scopes · **{num_hs}** CIBA-gated actions"
+        )
+
+        matrix = get_permission_matrix()
+
+        # Outgoing: what this agent can request from others
+        outgoing = matrix.get(agent_name, {})
+        st.caption("**Inter-Agent Access**")
+        if outgoing:
+            out_parts = []
+            for target, actions in outgoing.items():
+                labels = ", ".join(IA_ACTION_LABELS.get(a, a) for a in actions)
+                out_parts.append(f"**{humanize(target)}**: {labels}")
+            st.markdown("Can request from: " + " · ".join(out_parts))
+        else:
+            st.markdown("Can request from: None")
+
+        # Incoming: which agents can request from this agent
+        incoming = {}
+        for requester, targets in matrix.items():
+            if agent_name in targets and targets[agent_name]:
+                incoming[requester] = targets[agent_name]
+        if incoming:
+            in_parts = []
+            for requester, actions in incoming.items():
+                labels = ", ".join(IA_ACTION_LABELS.get(a, a) for a in actions)
+                in_parts.append(f"**{humanize(requester)}**: {labels}")
+            st.markdown("Accepts requests from: " + " · ".join(in_parts))
+        else:
+            st.markdown("Accepts requests from: None")
+
         st.divider()
 
         st.markdown("**Agent Status**")
