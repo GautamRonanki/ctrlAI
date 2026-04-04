@@ -45,6 +45,7 @@
   "security_report_agent": {
     "gmail_agent": [
       "read_email_context",
+      "send_email",
       "send_alert_email"
     ],
     "github_agent": [
@@ -53,6 +54,9 @@
     ],
     "drive_agent": [
       "store_attachment"
+    ],
+    "calendar_agent": [
+      "check_availability"
     ]
   },
   "drive_agent": {

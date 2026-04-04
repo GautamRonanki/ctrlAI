@@ -74,8 +74,6 @@ async def login(request: Request):
         "redirect_uri": f"{APP_BASE_URL}/callback",
         "scope": "openid profile email offline_access",
         "audience": f"https://{AUTH0_DOMAIN}/api/v2/",
-        "connection": "google-oauth2",
-        "access_type": "offline",
         "prompt": "consent",
     }
     query = "&".join(f"{k}={v}" for k, v in params.items())
