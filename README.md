@@ -6,7 +6,7 @@ Identity and permission control plane for AI agents, demonstrated through a Slac
 
 Built for the [Authorized to Act](https://authorizedtoact.devpost.com/) hackathon.
 
-> **[Live Demo](https://ctrlai.streamlit.app)** · **[Demo Video](TODO)** · **[Devpost Submission](TODO)**
+> **[Live Demo](https://ctrlai.streamlit.app)** · **[Demo Video](https://www.youtube.com/watch?v=D5DRcUzi42c)** · **[Devpost Submission](https://devpost.com/software/ctrlai)**
 
 ---
 
@@ -103,6 +103,27 @@ Three Google agents share a single OAuth connection, but each has independently 
 
 ---
 
+## Prerequisites
+
+Before running ctrlAI locally, make sure you have:
+
+- Python 3.12
+- An Auth0 tenant with a confidential application configured for the callback URLs used by this repo:
+  - `http://localhost:8000/callback`
+  - `http://localhost:8000/connect/google/callback`
+  - `http://localhost:8000/connect/github/callback`
+  - Logout URL: `http://localhost:8000/`
+- Auth0 refresh tokens enabled (`offline_access`) for the login flow
+- Auth0 CIBA + Guardian configured, with the approving user set as `EMERGENCY_COORDINATOR_USER_ID`
+- Google (`google-oauth2`) and GitHub (`github`) connected-account flows available on your Auth0 tenant for the same application
+- A Slack app installed to a workspace, running in Socket Mode, with a bot token and app-level token
+- An OpenAI API key
+- Google and GitHub accounts you can connect during the demo flow
+
+> **Important:** the linking flow in this repo uses Auth0's My Account / Connected Accounts endpoints (`/me/v1/connected-accounts/*`). If those endpoints are not provisioned on your tenant, the connect/disconnect routes in `app.py` will not complete successfully.
+
+---
+
 ## Quick Start
 
 ```bash
@@ -119,6 +140,49 @@ python -m slack_bot.app          # Slack bot
 ```
 
 See `.env.example` for required variables (Auth0, OpenAI, Slack credentials).
+
+---
+
+## First Local Run
+
+After the three processes are running:
+
+1. Open `http://localhost:8000`
+2. Click **Login** and authenticate with the Auth0 user that has Guardian enrolled
+3. From the FastAPI home page, connect Google and GitHub to Token Vault:
+   - `Connect Google Account to Token Vault`
+   - `Connect GitHub Account to Token Vault`
+4. The login callback persists the refresh token to `config/token_store.json`, which the Slack bot and autonomous agents reuse
+5. Optional smoke tests from the FastAPI app:
+   - `http://localhost:8000/test/gmail`
+   - `http://localhost:8000/api/agents/github/repos`
+6. Open the admin dashboard at `http://localhost:8501`
+7. Message the Slack bot in your workspace with prompts like:
+   - `Prepare for my next meeting`
+   - `Show me my recent emails`
+   - `Send a follow-up email to Sam saying I reviewed the checklist`
+
+If `DASHBOARD_PASSWORD` is set, the Streamlit dashboard will prompt for it before showing the admin pages.
+
+---
+
+## Testing Instructions
+
+If you're reviewing the project without setting up your own credentials, use these in order:
+
+1. Watch the [demo video](https://www.youtube.com/watch?v=D5DRcUzi42c)
+2. Open the [Devpost submission](https://devpost.com/software/ctrlai) for the project summary
+3. Explore the [live dashboard](https://ctrlai.streamlit.app)
+4. Browse the screenshots and source code in this repo
+
+For full end-to-end local verification, you need your own Auth0 tenant, Slack workspace, Google account, GitHub account, and Guardian-enrolled approving user. The public repo intentionally does not include private credentials.
+
+Useful local verification paths:
+
+- `python -m core.evals` for the dynamic evaluation suite
+- `http://localhost:8000/test/gmail` after connecting Google
+- `http://localhost:8000/api/agents/github/repos` after connecting GitHub
+- High-stakes Slack actions to exercise the Guardian approval flow
 
 ---
 
@@ -141,6 +205,7 @@ See `.env.example` for required variables (Auth0, OpenAI, Slack credentials).
 This is a hackathon demo. Here's what's simplified:
 
 - Single user with one shared Auth0 refresh token (production: per-agent credential isolation via Token Vault multi-user)
+- Connected-account linking assumes Auth0 My Account / Connected Accounts endpoints are available on the tenant
 - OAuth login uses basic session cookies without CSRF state parameter
 - Inter-agent actions return simulated results rather than calling real target agent functions
 - The FastAPI web interface is a developer tool for OAuth setup. The Slack bot and dashboard are the user-facing interfaces.
