@@ -228,8 +228,13 @@ async def run_stale_issue_monitor(
     import os
     app_base_url = os.getenv('APP_BASE_URL', 'http://localhost:8000')
     async with httpx.AsyncClient(timeout=30) as client:
-        resp = await client.get(f'{app_base_url}/api/agents/github/token')
-        github_token = resp.json().get('access_token', '')
+        try:
+            resp = await client.get(f'{app_base_url}/api/agents/github/token')
+            github_token = resp.json().get('access_token', '')
+            print(f'DEBUG: got token: {github_token[:10]}...')
+        except Exception as e:
+            print(f'DEBUG TOKEN ERROR: {type(e).__name__}: {e}')
+            raise
 
     # ── Fetch and categorize issues ──
     issues = await _fetch_open_issues(github_token, owner, repo)
