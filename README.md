@@ -157,7 +157,7 @@ After the three processes are running:
    - `http://localhost:8000/test/gmail`
    - `http://localhost:8000/api/agents/github/repos`
 6. Open the admin dashboard at `http://localhost:8501`
-7. Message the Slack bot in your workspace with prompts like:
+7. If you configured your own Slack workspace and app, message the Slack bot with prompts like:
    - `Prepare for my next meeting`
    - `Show me my recent emails`
    - `Send a follow-up email to Sam saying I reviewed the checklist`
@@ -173,7 +173,10 @@ If you're reviewing the project without setting up your own credentials, use the
 1. Watch the [demo video](https://www.youtube.com/watch?v=D5DRcUzi42c)
 2. Open the [Devpost submission](https://devpost.com/software/ctrlai) for the project summary
 3. Explore the [live dashboard](https://ctrlai.streamlit.app)
+   - Password: `auth0okta`
 4. Browse the screenshots and source code in this repo
+
+The Slack bot shown in the demo is connected to a private workspace used for the project demo. Public reviewers should treat the video as the canonical walkthrough of the employee-facing Slack experience. Reproducing the Slack flow locally requires creating your own Slack app, installing it into your own workspace, and supplying your own bot/app tokens.
 
 For full end-to-end local verification, you need your own Auth0 tenant, Slack workspace, Google account, GitHub account, and Guardian-enrolled approving user. The public repo intentionally does not include private credentials.
 
@@ -182,7 +185,8 @@ Useful local verification paths:
 - `python -m core.evals` for the dynamic evaluation suite
 - `http://localhost:8000/test/gmail` after connecting Google
 - `http://localhost:8000/api/agents/github/repos` after connecting GitHub
-- High-stakes Slack actions to exercise the Guardian approval flow
+- The live dashboard for admin controls, audit logs, autonomous agents, and eval results
+- High-stakes Slack actions to exercise the Guardian approval flow if you configure your own Slack workspace
 
 ---
 
