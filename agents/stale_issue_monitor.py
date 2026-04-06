@@ -16,7 +16,7 @@ from loguru import logger
 from core.permissions import check_scope_permission, is_agent_active, is_high_stakes
 from core.logger import log_audit, log_api_call
 from core.llm import get_llm, call_llm
-from core.token_service import get_github_token, get_stored_refresh_token
+from core.token_service import get_github_token, get_stored_github_refresh_token
 
 GITHUB_BASE = "https://api.github.com"
 AGENT_NAME = "stale_issue_monitor"
@@ -221,7 +221,7 @@ async def run_stale_issue_monitor(
         }
 
     # ── Token Vault retrieval ──
-    refresh_token = get_stored_refresh_token()
+    refresh_token = get_stored_github_refresh_token()
     if not refresh_token:
         return {
             "status": "error",

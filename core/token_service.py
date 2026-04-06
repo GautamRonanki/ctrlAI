@@ -34,6 +34,20 @@ def get_stored_refresh_token() -> str:
     return os.getenv("REFRESH_TOKEN", "")
 
 
+def get_stored_github_refresh_token() -> str:
+    """Load the GitHub-specific refresh token, falling back to GITHUB_REFRESH_TOKEN."""
+    if TOKEN_STORE_PATH.exists():
+        try:
+            data = json.loads(TOKEN_STORE_PATH.read_text())
+            refresh_token = data.get("github_refresh_token", "")
+            if refresh_token:
+                return refresh_token
+        except (json.JSONDecodeError, OSError):
+            pass
+
+    return os.getenv("GITHUB_REFRESH_TOKEN", "")
+
+
 async def get_token_via_vault(refresh_token: str, connection: str) -> dict | None:
     """
     Exchange an Auth0 refresh token for an external provider's access token via Token Vault.
