@@ -6,6 +6,7 @@ Manual auth implementation with Connected Accounts flow for Token Vault.
 import os
 import secrets
 import logging
+from pathlib import Path
 
 from dotenv import load_dotenv
 from fastapi import FastAPI, Request, HTTPException
@@ -384,8 +385,17 @@ async def connect_github(request: Request):
     ticket = connect_params.get("ticket")
 
     if connect_uri and ticket:
-        request.session["github_connect_auth_session"] = auth_session
-        request.session["github_me_access_token"] = me_token
+        import json
+        token_store_path = Path(__file__).parent / "config" / "token_store.json"
+        store_data = {}
+        if token_store_path.exists():
+            try:
+                store_data = json.loads(token_store_path.read_text())
+            except (json.JSONDecodeError, OSError):
+                pass
+        store_data["github_connect_auth_session"] = auth_session
+        store_data["github_me_access_token"] = me_token
+        token_store_path.write_text(json.dumps(store_data))
         return RedirectResponse(f"{connect_uri}?ticket={ticket}")
     return JSONResponse(
         {"error": "No connect_uri or ticket", "data": data}, status_code=400
@@ -394,19 +404,78 @@ async def connect_github(request: Request):
 
 @app.get("/connect/github/callback")
 async def connect_github_callback(request: Request):
-    # Check all possible locations for the connect_code
-    connect_code = request.query_params.get("connect_code")
-    code = request.query_params.get("code")
+    connect_code = request.query_params.get("connect_code") or request.query_params.get("code")
 
-    # Log everything we receive
     logger.info(f"GitHub callback - query params: {dict(request.query_params)}")
     logger.info(f"GitHub callback - full URL: {request.url}")
 
     if connect_code:
-        return RedirectResponse(f"/connect/github/complete?connect_code={connect_code}")
+        # Read auth session values from token_store.json (survive OAuth redirect)
+        import json
+        token_store_path = Path(__file__).parent / "config" / "token_store.json"
+        store_data = {}
+        if token_store_path.exists():
+            try:
+                store_data = json.loads(token_store_path.read_text())
+            except (json.JSONDecodeError, OSError):
+                pass
+        auth_session = store_data.get("github_connect_auth_session")
+        access_token = store_data.get("github_me_access_token")
+        if not auth_session or not access_token:
+            raise HTTPException(status_code=401, detail="Session expired. Login again.")
 
-    if code:
-        return RedirectResponse(f"/connect/github/complete?connect_code={code}")
+        async with httpx.AsyncClient() as client:
+            response = await client.post(
+                f"https://{AUTH0_DOMAIN}/me/v1/connected-accounts/complete",
+                headers={
+                    "Authorization": f"Bearer {access_token}",
+                    "Content-Type": "application/json",
+                },
+                json={
+                    "auth_session": auth_session,
+                    "connect_code": connect_code,
+                    "redirect_uri": f"{APP_BASE_URL}/connect/github/callback",
+                },
+            )
+
+        if response.status_code in (200, 201):
+            request.session["github_connected"] = True
+            logger.info("GitHub Connected Account linked!")
+
+            # Clean up temp values and optionally save GitHub username
+            store_data.pop("github_connect_auth_session", None)
+            store_data.pop("github_me_access_token", None)
+
+            refresh_token = request.session.get("refresh_token")
+            if refresh_token:
+                try:
+                    token_data = await get_token_via_vault(refresh_token, "github")
+                    if token_data:
+                        github_token = token_data.get("access_token")
+                        async with httpx.AsyncClient() as client:
+                            gh_user_resp = await client.get(
+                                "https://api.github.com/user",
+                                headers={
+                                    "Authorization": f"Bearer {github_token}",
+                                    "Accept": "application/vnd.github+json",
+                                },
+                            )
+                        if gh_user_resp.status_code == 200:
+                            github_username = gh_user_resp.json().get("login", "")
+                            if github_username:
+                                store_data["github_username"] = github_username
+                                logger.info(f"Saved GitHub username: {github_username}")
+                except Exception as e:
+                    logger.warning(f"Failed to fetch GitHub username: {e}")
+
+            token_store_path.write_text(json.dumps(store_data))
+            return RedirectResponse("/")
+
+        logger.error(f"GitHub connection failed: {response.text}")
+        return JSONResponse(
+            {"error": "GitHub connection failed", "details": response.json()},
+            status_code=400,
+        )
 
     # If nothing in query params, try to extract from hash via JS
     return HTMLResponse(f"""

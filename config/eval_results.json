@@ -1,5 +1,5 @@
 {
-  "timestamp": "2026-04-04T04:17:18.455668+00:00",
+  "timestamp": "2026-04-06T08:00:15.994999+00:00",
   "categories": {
     "permission": {
       "tests": [
@@ -353,141 +353,141 @@
         {
           "id": "ciba_drive_agent_delete_files",
           "category": "ciba",
-          "description": "Delete Files requires CIBA approval for Drive Agent",
+          "description": "Delete Files does NOT require CIBA approval for Drive Agent",
           "agent": "drive_agent",
           "action": "delete_files",
-          "expected_high_stakes": true,
-          "actual_high_stakes": true,
+          "expected_high_stakes": false,
+          "actual_high_stakes": false,
           "passed": true
         },
         {
           "id": "ciba_drive_agent_list_files",
           "category": "ciba",
-          "description": "List Files requires CIBA approval for Drive Agent",
+          "description": "List Files does NOT require CIBA approval for Drive Agent",
           "agent": "drive_agent",
           "action": "list_files",
-          "expected_high_stakes": true,
-          "actual_high_stakes": true,
+          "expected_high_stakes": false,
+          "actual_high_stakes": false,
           "passed": true
         },
         {
           "id": "ciba_drive_agent_search_files",
           "category": "ciba",
-          "description": "Search Files requires CIBA approval for Drive Agent",
+          "description": "Search Files does NOT require CIBA approval for Drive Agent",
           "agent": "drive_agent",
           "action": "search_files",
-          "expected_high_stakes": true,
-          "actual_high_stakes": true,
+          "expected_high_stakes": false,
+          "actual_high_stakes": false,
           "passed": true
         },
         {
           "id": "ciba_drive_agent_read_files",
           "category": "ciba",
-          "description": "Read Files requires CIBA approval for Drive Agent",
+          "description": "Read Files does NOT require CIBA approval for Drive Agent",
           "agent": "drive_agent",
           "action": "read_files",
-          "expected_high_stakes": true,
-          "actual_high_stakes": true,
+          "expected_high_stakes": false,
+          "actual_high_stakes": false,
           "passed": true
         },
         {
           "id": "ciba_drive_agent_create_files",
           "category": "ciba",
-          "description": "Create Files requires CIBA approval for Drive Agent",
+          "description": "Create Files does NOT require CIBA approval for Drive Agent",
           "agent": "drive_agent",
           "action": "create_files",
-          "expected_high_stakes": true,
-          "actual_high_stakes": true,
+          "expected_high_stakes": false,
+          "actual_high_stakes": false,
           "passed": true
         },
         {
           "id": "ciba_calendar_agent_create_events",
           "category": "ciba",
-          "description": "Create Events requires CIBA approval for Calendar Agent",
+          "description": "Create Events does NOT require CIBA approval for Calendar Agent",
           "agent": "calendar_agent",
           "action": "create_events",
-          "expected_high_stakes": true,
-          "actual_high_stakes": true,
+          "expected_high_stakes": false,
+          "actual_high_stakes": false,
           "passed": true
         },
         {
           "id": "ciba_calendar_agent_modify_events",
           "category": "ciba",
-          "description": "Modify Events requires CIBA approval for Calendar Agent",
+          "description": "Modify Events does NOT require CIBA approval for Calendar Agent",
           "agent": "calendar_agent",
           "action": "modify_events",
-          "expected_high_stakes": true,
-          "actual_high_stakes": true,
+          "expected_high_stakes": false,
+          "actual_high_stakes": false,
           "passed": true
         },
         {
           "id": "ciba_calendar_agent_list_events",
           "category": "ciba",
-          "description": "List Events requires CIBA approval for Calendar Agent",
+          "description": "List Events does NOT require CIBA approval for Calendar Agent",
           "agent": "calendar_agent",
           "action": "list_events",
-          "expected_high_stakes": true,
-          "actual_high_stakes": true,
+          "expected_high_stakes": false,
+          "actual_high_stakes": false,
           "passed": true
         },
         {
           "id": "ciba_calendar_agent_read_events",
           "category": "ciba",
-          "description": "Read Events requires CIBA approval for Calendar Agent",
+          "description": "Read Events does NOT require CIBA approval for Calendar Agent",
           "agent": "calendar_agent",
           "action": "read_events",
-          "expected_high_stakes": true,
-          "actual_high_stakes": true,
+          "expected_high_stakes": false,
+          "actual_high_stakes": false,
           "passed": true
         },
         {
           "id": "ciba_github_agent_post_comments",
           "category": "ciba",
-          "description": "Post Comments requires CIBA approval for Github Agent",
+          "description": "Post Comments does NOT require CIBA approval for Github Agent",
           "agent": "github_agent",
           "action": "post_comments",
-          "expected_high_stakes": true,
-          "actual_high_stakes": true,
+          "expected_high_stakes": false,
+          "actual_high_stakes": false,
           "passed": true
         },
         {
           "id": "ciba_github_agent_list_repos",
           "category": "ciba",
-          "description": "List Repos requires CIBA approval for Github Agent",
+          "description": "List Repos does NOT require CIBA approval for Github Agent",
           "agent": "github_agent",
           "action": "list_repos",
-          "expected_high_stakes": true,
-          "actual_high_stakes": true,
+          "expected_high_stakes": false,
+          "actual_high_stakes": false,
           "passed": true
         },
         {
           "id": "ciba_github_agent_list_issues",
           "category": "ciba",
-          "description": "List Issues requires CIBA approval for Github Agent",
+          "description": "List Issues does NOT require CIBA approval for Github Agent",
           "agent": "github_agent",
           "action": "list_issues",
-          "expected_high_stakes": true,
-          "actual_high_stakes": true,
+          "expected_high_stakes": false,
+          "actual_high_stakes": false,
           "passed": true
         },
         {
           "id": "ciba_github_agent_read_repos",
           "category": "ciba",
-          "description": "Read Repos requires CIBA approval for Github Agent",
+          "description": "Read Repos does NOT require CIBA approval for Github Agent",
           "agent": "github_agent",
           "action": "read_repos",
-          "expected_high_stakes": true,
-          "actual_high_stakes": true,
+          "expected_high_stakes": false,
+          "actual_high_stakes": false,
           "passed": true
         },
         {
           "id": "ciba_github_agent_read_issues",
           "category": "ciba",
-          "description": "Read Issues requires CIBA approval for Github Agent",
+          "description": "Read Issues does NOT require CIBA approval for Github Agent",
           "agent": "github_agent",
           "action": "read_issues",
-          "expected_high_stakes": true,
-          "actual_high_stakes": true,
+          "expected_high_stakes": false,
+          "actual_high_stakes": false,
           "passed": true
         },
         {
@@ -725,9 +725,42 @@
           "passed": true
         },
         {
-          "id": "ia_calendar_agent_gmail_agent_blocked",
+          "id": "ia_calendar_agent_gmail_agent_read_email_context_allow",
           "category": "inter_agent",
-          "description": "Calendar Agent \u2192 Gmail Agent: should be fully blocked",
+          "description": "Calendar Agent \u2192 Gmail Agent: read email context should be allowed",
+          "requesting": "calendar_agent",
+          "target": "gmail_agent",
+          "action": "read_email_context",
+          "expected": true,
+          "actual": true,
+          "passed": true
+        },
+        {
+          "id": "ia_calendar_agent_gmail_agent_send_email_allow",
+          "category": "inter_agent",
+          "description": "Calendar Agent \u2192 Gmail Agent: send email should be allowed",
+          "requesting": "calendar_agent",
+          "target": "gmail_agent",
+          "action": "send_email",
+          "expected": true,
+          "actual": true,
+          "passed": true
+        },
+        {
+          "id": "ia_calendar_agent_gmail_agent_send_alert_email_allow",
+          "category": "inter_agent",
+          "description": "Calendar Agent \u2192 Gmail Agent: send alert email should be allowed",
+          "requesting": "calendar_agent",
+          "target": "gmail_agent",
+          "action": "send_alert_email",
+          "expected": true,
+          "actual": true,
+          "passed": true
+        },
+        {
+          "id": "ia_calendar_agent_gmail_agent_store_attachment_deny",
+          "category": "inter_agent",
+          "description": "Calendar Agent \u2192 Gmail Agent: store attachment should be denied",
           "requesting": "calendar_agent",
           "target": "gmail_agent",
           "action": "store_attachment",
@@ -736,45 +769,12 @@
           "passed": true
         },
         {
-          "id": "ia_calendar_agent_drive_agent_store_attachment_allow",
+          "id": "ia_calendar_agent_drive_agent_blocked",
           "category": "inter_agent",
-          "description": "Calendar Agent \u2192 Drive Agent: store attachment should be allowed",
+          "description": "Calendar Agent \u2192 Drive Agent: should be fully blocked",
           "requesting": "calendar_agent",
           "target": "drive_agent",
           "action": "store_attachment",
-          "expected": true,
-          "actual": true,
-          "passed": true
-        },
-        {
-          "id": "ia_calendar_agent_drive_agent_delete_file_allow",
-          "category": "inter_agent",
-          "description": "Calendar Agent \u2192 Drive Agent: delete file should be allowed",
-          "requesting": "calendar_agent",
-          "target": "drive_agent",
-          "action": "delete_file",
-          "expected": true,
-          "actual": true,
-          "passed": true
-        },
-        {
-          "id": "ia_calendar_agent_drive_agent_read_files_allow",
-          "category": "inter_agent",
-          "description": "Calendar Agent \u2192 Drive Agent: read files should be allowed",
-          "requesting": "calendar_agent",
-          "target": "drive_agent",
-          "action": "read_files",
-          "expected": true,
-          "actual": true,
-          "passed": true
-        },
-        {
-          "id": "ia_calendar_agent_drive_agent_check_availability_deny",
-          "category": "inter_agent",
-          "description": "Calendar Agent \u2192 Drive Agent: check availability should be denied",
-          "requesting": "calendar_agent",
-          "target": "drive_agent",
-          "action": "check_availability",
           "expected": false,
           "actual": false,
           "passed": true
@@ -1249,10 +1249,10 @@
         {
           "id": "enforce_inter_agent_revocation",
           "category": "enforcement",
-          "description": "Inter-agent revocation: remove gmail_agent \u2192 drive_agent access, verify denied, restore, verify allowed",
+          "description": "Inter-agent revocation: remove gmail_agent \u2192 calendar_agent access, verify denied, restore, verify allowed",
           "requesting": "gmail_agent",
-          "target": "drive_agent",
-          "action": "store_attachment",
+          "target": "calendar_agent",
+          "action": "check_availability",
           "denied_after_revoke": true,
           "allowed_after_restore": true,
           "passed": true
@@ -1285,7 +1285,7 @@
           "agent_correct": true,
           "action_correct": true,
           "passed": true,
-          "latency_ms": 1663.2
+          "latency_ms": 1470.3
         },
         {
           "id": "route_gmail_search",
@@ -1298,7 +1298,7 @@
           "agent_correct": true,
           "action_correct": true,
           "passed": true,
-          "latency_ms": 1590.2
+          "latency_ms": 736.4
         },
         {
           "id": "route_gmail_send",
@@ -1311,7 +1311,7 @@
           "agent_correct": true,
           "action_correct": true,
           "passed": true,
-          "latency_ms": 1854.7
+          "latency_ms": 892.3
         },
         {
           "id": "route_calendar_list",
@@ -1324,7 +1324,7 @@
           "agent_correct": true,
           "action_correct": true,
           "passed": true,
-          "latency_ms": 1398.6
+          "latency_ms": 1446.8
         },
         {
           "id": "route_drive_list",
@@ -1337,7 +1337,7 @@
           "agent_correct": true,
           "action_correct": true,
           "passed": true,
-          "latency_ms": 1984.0
+          "latency_ms": 1329.2
         },
         {
           "id": "route_drive_search",
@@ -1350,7 +1350,7 @@
           "agent_correct": true,
           "action_correct": true,
           "passed": true,
-          "latency_ms": 836.1
+          "latency_ms": 822.0
         },
         {
           "id": "route_github_repos",
@@ -1363,7 +1363,7 @@
           "agent_correct": true,
           "action_correct": true,
           "passed": true,
-          "latency_ms": 1298.7
+          "latency_ms": 1381.5
         },
         {
           "id": "route_github_issues",
@@ -1376,7 +1376,7 @@
           "agent_correct": true,
           "action_correct": true,
           "passed": true,
-          "latency_ms": 1638.1
+          "latency_ms": 631.0
         },
         {
           "id": "route_none",
@@ -1389,7 +1389,7 @@
           "agent_correct": true,
           "action_correct": true,
           "passed": true,
-          "latency_ms": 1639.4
+          "latency_ms": 647.7
         },
         {
           "id": "route_calendar_create",
@@ -1402,7 +1402,7 @@
           "agent_correct": true,
           "action_correct": true,
           "passed": true,
-          "latency_ms": 1186.8
+          "latency_ms": 2091.0
         }
       ],
       "total": 10,

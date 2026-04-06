@@ -1,21 +1,16 @@
 {
   "gmail_agent": {
-    "calendar_agent": [
-      "check_availability"
-    ],
     "github_agent": [
       "read_issues"
     ],
     "drive_agent": [
       "store_attachment"
+    ],
+    "calendar_agent": [
+      "check_availability"
     ]
   },
   "calendar_agent": {
-    "drive_agent": [
-      "store_attachment",
-      "delete_file",
-      "read_files"
-    ],
     "github_agent": [
       "read_issues",
       "post_comments"
