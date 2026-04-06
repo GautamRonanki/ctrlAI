@@ -195,6 +195,10 @@ async def run_stale_issue_monitor(
     """
     Main entry point. Runs the full stale issue analysis.
     """
+    import os
+    print(f"DEBUG AUTH0_DOMAIN: {os.getenv('AUTH0_DOMAIN')}")
+    print(f"DEBUG GITHUB_REFRESH_TOKEN: {os.getenv('GITHUB_REFRESH_TOKEN', 'NOT SET')[:10]}...")
+
     if not is_agent_active(AGENT_NAME):
         log_audit(
             "agent_execution",
