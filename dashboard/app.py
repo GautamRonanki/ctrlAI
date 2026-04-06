@@ -1474,6 +1474,7 @@ elif page == "🤖 Autonomous Agents":
     @st.dialog("🔍 Stale Issue Monitor", width="large")
     def show_stale_issue_dialog(owner: str, repo: str, execute: bool, test: bool):
         try:
+            print('DEBUG: ABOUT TO CALL MONITOR')
             with st.spinner(
                 "Stale Issue Monitor running through permission pipeline → Token Vault → GitHub API..."
             ):
@@ -1487,6 +1488,8 @@ elif page == "🤖 Autonomous Agents":
                     )
                 )
         except Exception as e:
+            import traceback
+            traceback.print_exc()
             st.error(f"Stale Issue Monitor failed: {e}")
             return
 

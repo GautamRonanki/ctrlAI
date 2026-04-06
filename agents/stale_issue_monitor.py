@@ -224,6 +224,7 @@ async def run_stale_issue_monitor(
             "reason": "Stale Issue Monitor does not have the 'read_issues' scope.",
         }
 
+    print('DEBUG: REACHED TOKEN STEP')
     # ── Token Vault retrieval via backend ──
     import os
     app_base_url = os.getenv('APP_BASE_URL', 'http://localhost:8000')
