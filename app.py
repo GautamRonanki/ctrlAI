@@ -556,6 +556,18 @@ async def connect_github_complete(request: Request, connect_code: str):
     )
 
 
+@app.get("/api/agents/github/token")
+async def agent_github_token():
+    from core.token_service import get_stored_refresh_token
+    refresh_token = get_stored_refresh_token()
+    if not refresh_token:
+        raise HTTPException(status_code=500, detail="No refresh token available")
+    token_data = await get_token_via_vault(refresh_token, "github")
+    if not token_data:
+        raise HTTPException(status_code=500, detail="Token Vault exchange failed")
+    return {"access_token": token_data.get("access_token", "")}
+
+
 # ============================================================
 # Disconnect Connected Accounts
 # ============================================================

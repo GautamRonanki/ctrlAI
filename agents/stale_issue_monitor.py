@@ -224,25 +224,12 @@ async def run_stale_issue_monitor(
             "reason": "Stale Issue Monitor does not have the 'read_issues' scope.",
         }
 
-    # ── Token Vault retrieval ──
-    refresh_token = get_stored_github_refresh_token()
-    if not refresh_token:
-        return {
-            "status": "error",
-            "reason": "No refresh token available. Set REFRESH_TOKEN or log in via the web dashboard first.",
-        }
-
-    log_audit("token_vault", AGENT_NAME, "retrieve_github_token", "requesting", {})
-
-    github_token = await get_github_token(refresh_token)
-    if not github_token:
-        log_audit("token_vault", AGENT_NAME, "retrieve_github_token", "failed", {})
-        return {
-            "status": "error",
-            "reason": "Failed to retrieve GitHub token from Token Vault.",
-        }
-
-    log_audit("token_vault", AGENT_NAME, "retrieve_github_token", "success", {})
+    # ── Token Vault retrieval via backend ──
+    import os
+    app_base_url = os.getenv('APP_BASE_URL', 'http://localhost:8000')
+    async with httpx.AsyncClient(timeout=30) as client:
+        resp = await client.get(f'{app_base_url}/api/agents/github/token')
+        github_token = resp.json().get('access_token', '')
 
     # ── Fetch and categorize issues ──
     issues = await _fetch_open_issues(github_token, owner, repo)
