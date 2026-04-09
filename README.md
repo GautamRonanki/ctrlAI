@@ -173,7 +173,7 @@ If you're reviewing the project without setting up your own credentials, use the
 1. Watch the [demo video](https://www.youtube.com/watch?v=D5DRcUzi42c)
 2. Open the [Devpost submission](https://devpost.com/software/ctrlai) for the project summary
 3. Explore the [live dashboard](https://ctrlai.streamlit.app)
-   - Password: `auth0okta`
+   - Password: `auth0`
 4. Browse the screenshots and source code in this repo
 
 The Slack bot shown in the demo is connected to a private workspace used for the project demo. Public reviewers should treat the video as the canonical walkthrough of the employee-facing Slack experience. Reproducing the Slack flow locally requires creating your own Slack app, installing it into your own workspace, and supplying your own bot/app tokens.
